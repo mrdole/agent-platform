@@ -1,0 +1,40 @@
+{
+  "instructions": ["./RULES.md"],
+  "mcp": {
+    "bench": {
+      "type": "local",
+      "command": ["{env:AP_VENV}/bin/python", "{env:AP_HOME}/mcp/bench/server.py"],
+      "environment": {
+        "KNOWLEDGE_ROOT": "{env:AP_KNOWLEDGE_ROOT}",
+        "KNOWLEDGE_PROFILE": "{env:AP_PROFILE}",
+        "BENCH_NAME": "{env:AP_BENCH}",
+        "BENCH_ALLOW_WRITE": "{env:AP_BENCH_ALLOW_WRITE}",
+        "BENCH_VISA_BACKEND": "{env:AP_VISA_BACKEND}",
+        "BENCH_AUDIT_LOG": "{env:AP_BENCH_AUDIT_LOG}"
+      },
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+  "permission": {
+    "bash": {
+      "bench-lock *": "ask",
+      "python3 -m pytest*": "allow"
+    },
+    "skill": {
+      "bench-*": "allow"
+    }
+  },
+  "agent": {
+    "operator": {
+      "mode": "primary",
+      "description": "Runs bench tasks: identifies instruments, takes read-only measurements, flashes under lock with approval, and reports a measurement table.",
+      "model": "{env:AP_MODEL_BUILDER}",
+      "prompt": "{file:./prompts/operator.md}",
+      "permission": {
+        "edit": "deny",
+        "task": { "*": "deny", "scout": "allow", "reviewer": "allow" }
+      }
+    }
+  }
+}

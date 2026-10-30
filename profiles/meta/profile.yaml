@@ -1,0 +1,10 @@
+name: meta
+description: Maintains the platform itself and the lab-knowledge repo - profiles, prompts, skills, evals, knowledge docs. Changes go through MRs with check and eval results.
+default_agent: lead
+gitlab:
+  token_env: GITLAB_TOKEN_META
+  role: developer
+  scopes: [api, write_repository]
+runner_tags: [agent]
+skill_scopes: [core, meta]
+headless_auto_approved: ["python3 evals/run.py*"]

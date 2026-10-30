@@ -1,0 +1,47 @@
+- name: Knowledge checkout directory
+  ansible.builtin.file:
+    path: "{{ ap_knowledge_root }}"
+    state: directory
+    owner: "{{ ap_run_user }}"
+    mode: "0755"
+  become: "{{ ap_become }}"
+
+- name: Clone lab-knowledge
+  ansible.builtin.git:
+    repo: "{{ ap_knowledge_repo_url }}"
+    dest: "{{ ap_knowledge_root }}"
+    version: "{{ ap_knowledge_version }}"
+    update: "{{ ap_knowledge_update }}"
+  become: "{{ ap_become }}"
+  become_user: "{{ ap_run_user if ap_become else omit }}"
+  when: ap_knowledge_repo_url | length > 0
+
+- name: Clone your personal notes repo (workstation)
+  ansible.builtin.git:
+    repo: "{{ ap_personal_knowledge_repo_url }}"
+    dest: "{{ ap_personal_knowledge_root }}"
+    version: main
+    update: false
+  when: ap_install_scope == "user" and ap_personal_knowledge_repo_url | length > 0
+
+- name: Keep lab-knowledge current (servers)
+  when: ap_install_scope == "system"
+  become: true
+  block:
+    - name: Pull service and timer units
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - agent-knowledge-pull.service
+        - agent-knowledge-pull.timer
+
+    - name: Enable pull timer
+      ansible.builtin.systemd:
+        name: agent-knowledge-pull.timer
+        enabled: true
+        state: started
+        daemon_reload: true

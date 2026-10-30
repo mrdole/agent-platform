@@ -1,0 +1,29 @@
+{
+  "instructions": ["./RULES.md"],
+  "permission": {
+    "bash": {
+      "python3 tools/check.py*": "allow",
+      "python3 tools/render.py*": "allow",
+      "python3 tools/skills_index.py*": "allow",
+      "python3 tools/models.py*": "allow",
+      "python3 -m pytest*": "allow",
+      "python3 evals/run.py*": "ask",
+      "python3 mcp/knowledge/knowledge_core.py*": "allow"
+    },
+    "skill": {
+      "meta-*": "allow"
+    }
+  },
+  "agent": {
+    "tester": {
+      "permission": {
+        "bash": {
+          "python3 tools/check.py*": "allow",
+          "python3 -m pytest*": "allow",
+          "python3 evals/run.py*": "allow",
+          "python3 mcp/knowledge/knowledge_core.py validate*": "allow"
+        }
+      }
+    }
+  }
+}

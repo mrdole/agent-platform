@@ -1,0 +1,46 @@
+# Issue -> agent -> draft MR, for any project repo.
+#
+# In the project's .gitlab-ci.yml:
+#
+#   include:
+#     - project: tools/agent-platform
+#       ref: v0.1.0
+#       file: ci/agent-dispatch.gitlab-ci.yml
+#
+#   agent-dispatch:
+#     extends: .agent-dispatch
+#     variables:
+#       AP_PROFILE: firmware
+#
+# Then:
+#   1. Create the profile token (see agent-platform docs/security.md) and store it as a
+#      masked, protected CI/CD variable named as in profile.yaml (e.g. GITLAB_TOKEN_FIRMWARE).
+#      Also add CORP_LLM_KEY (masked, protected).
+#   2. Create labels: agent::ready, agent::running, agent::review, agent::needs-human,
+#      agent::failed, profile::<name>.
+#   3. Add a pipeline schedule on the default branch (e.g. every 15 minutes) with AP_DISPATCH=1.
+#
+# Bench jobs: also set a literal `resource_group: bench-<name>` and the bench runner's tag
+# in the extending job, so only one job uses a bench at a time.
+
+.agent-dispatch:
+  image: ${AP_IMAGE}
+  variables:
+    AP_IMAGE: registry.example.internal/tools/agent-platform:v0.1.0
+    AP_PROFILE: ""
+    AP_LLM_BASE_URL: https://llm.example.internal/v1
+    AP_KNOWLEDGE_ROOT: /srv/lab-knowledge
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "0"
+  tags: [agent]
+  resource_group: agent-dispatch
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $AP_DISPATCH == "1"
+  script:
+    - test -n "$AP_PROFILE" || { echo "set AP_PROFILE"; exit 2; }
+    - test -d "$AP_KNOWLEDGE_ROOT" || echo "warning: $AP_KNOWLEDGE_ROOT missing; knowledge tools will fail"
+    - agent-dispatch --profile "$AP_PROFILE"
+  artifacts:
+    when: always
+    paths: [.agent-run/]
+    expire_in: 14 days

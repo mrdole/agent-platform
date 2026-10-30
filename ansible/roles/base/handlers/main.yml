@@ -1,0 +1,9 @@
+- name: Update CA trust
+  ansible.builtin.command: update-ca-trust
+  become: true
+  changed_when: true
+
+- name: Create tmpfiles
+  ansible.builtin.command: systemd-tmpfiles --create /etc/tmpfiles.d/agent-platform.conf
+  become: true
+  changed_when: true

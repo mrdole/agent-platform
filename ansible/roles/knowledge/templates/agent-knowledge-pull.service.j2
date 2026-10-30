@@ -1,0 +1,9 @@
+[Unit]
+Description=Update the lab-knowledge checkout used by agents
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User={{ ap_user }}
+ExecStart=/usr/bin/git -C {{ ap_knowledge_root }} pull --ff-only --quiet

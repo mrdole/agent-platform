@@ -1,0 +1,18 @@
+# Install the agent platform.
+#   Workstation (WSL or local RHEL):  ansible-playbook site.yml --limit workstation -K
+#   Agent servers:                    ansible-playbook site.yml --limit agent_servers
+# Only ansible.builtin modules are used, so no Galaxy collections are needed (air-gap friendly).
+- name: Agent platform
+  hosts: all
+  roles:
+    - role: base
+      tags: [base]
+    - role: tools
+      tags: [tools]
+    - role: agent_user
+      tags: [agent_user]
+      when: ap_install_scope == "system"
+    - role: platform
+      tags: [platform]
+    - role: knowledge
+      tags: [knowledge]

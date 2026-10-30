@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# bench-lock <bench> [--wait SECONDS] -- <command...>
+#
+# Runs a command while holding an exclusive lock on a bench. This covers one host only.
+# Across runners, GitLab `resource_group: bench-<name>` does the locking.
+# Exit 75 means the bench is busy.
+set -euo pipefail
+
+usage() {
+  echo "usage: bench-lock <bench> [--wait SECONDS] -- <command...>" >&2
+  exit 2
+}
+
+[[ $# -ge 3 ]] || usage
+bench="$1"
+shift
+[[ "$bench" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "bench-lock: bad bench name: $bench" >&2; exit 2; }
+
+wait_s=0
+if [[ "$1" == "--wait" ]]; then
+  wait_s="${2:?--wait needs a value}"
+  shift 2
+fi
+[[ "${1:-}" == "--" ]] || usage
+shift
+[[ $# -ge 1 ]] || usage
+
+lockdir="${AP_LOCK_DIR:-${XDG_RUNTIME_DIR:-/tmp}/agent-platform-locks}"
+mkdir -p "$lockdir"
+echo "bench-lock: $bench by ${USER:-unknown} pid $$ at $(date -Is): $*" >&2
+exec flock --exclusive --timeout "$wait_s" --conflict-exit-code 75 "$lockdir/$bench.lock" "$@"

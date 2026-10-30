@@ -1,0 +1,9 @@
+# Copy to ~/.config/agent-platform/bots.yaml and list the projects each profile works in.
+# Used by tools/gitlab_bots.py to create one bot token per (profile, project).
+gitlab_url: https://gitlab.example.internal
+expires_days: 90          # your instance may enforce a lower maximum
+profiles:
+  firmware: [CHANGEME/firmware]
+  pipeline: [CHANGEME/pipeline, CHANGEME/ci-templates-a, CHANGEME/ci-templates-b, CHANGEME/vitis-dev]
+  meta: [CHANGEME/agent-platform, CHANGEME/lab-knowledge]
+  it-debug: [CHANGEME/firmware, CHANGEME/pipeline]

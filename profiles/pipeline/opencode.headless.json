@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "bash": {
+      "glab ci retry*": "deny",
+      "glab ci run*": "deny",
+      "glab mr create*": "deny",
+      "python3 -c *": "deny"
+    }
+  }
+}

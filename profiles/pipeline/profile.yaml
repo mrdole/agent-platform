@@ -1,0 +1,10 @@
+name: pipeline
+description: GitLab CI/CD work - failing pipelines, .gitlab-ci.yml changes, shared CI templates and job scripts.
+default_agent: lead
+gitlab:
+  token_env: GITLAB_TOKEN_PIPELINE
+  role: developer
+  scopes: [api, write_repository]
+runner_tags: [agent]
+skill_scopes: [core, pipeline]
+headless_auto_approved: []

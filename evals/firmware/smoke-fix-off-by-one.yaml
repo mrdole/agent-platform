@@ -1,0 +1,11 @@
+id: fw-smoke-off-by-one
+profile: firmware
+agent: lead
+fixture: py-off-by-one
+prompt: |
+  The checksum helper in checksum.py gives the wrong answer: test_checksum.py fails.
+  Acceptance criteria:
+  1. `python3 -m pytest -q` passes.
+  2. Only checksum.py changes; the tests are not modified.
+check: python3 -m pytest -q && git diff --quiet HEAD -- test_checksum.py
+timeout_s: 1800

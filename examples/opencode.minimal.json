@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "provider": {
+    "corp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Corporate LLM server",
+      "options": {
+        "baseURL": "https://YOUR-LLM-SERVER/v1",
+        "apiKey": "{env:CORP_LLM_KEY}"
+      },
+      "models": {
+        "laguna-5.2.1": { "name": "Laguna 5.2.1" },
+        "gpt-oss-120b": { "name": "gpt-oss 120b" },
+        "gpt-oss-20b": { "name": "gpt-oss 20b" },
+        "gemma-4-31b": { "name": "Gemma 31b" },
+        "gemma-4-26b": { "name": "Gemma 26b" }
+      }
+    }
+  },
+  "model": "corp/gpt-oss-120b",
+  "small_model": "corp/gpt-oss-20b",
+  "agent": {
+    "plan": {
+      "model": "corp/laguna-5.2.1",
+      "description": "Orchestrator: writes the spec, breaks work into bounded tasks, delegates to subagents, reviews results."
+    },
+    "build": {
+      "model": "corp/gpt-oss-120b",
+      "description": "Main implementer for firmware and pipeline changes."
+    },
+    "scout": {
+      "mode": "subagent",
+      "model": "corp/gemma-4-26b",
+      "description": "Read-only repo discovery. Returns a short list of relevant files, excerpts, dependencies and assumptions.",
+      "prompt": "You are a read-only scout. Find what is relevant to the task and stop. Output only: files (path + why), key excerpts, dependencies, assumptions, open questions. Keep it under 300 words. Do not propose fixes.",
+      "tools": { "write": false, "edit": false, "bash": false }
+    },
+    "tester": {
+      "mode": "subagent",
+      "model": "corp/gpt-oss-20b",
+      "description": "Runs builds, lint and tests and reports pass/fail with the failing output.",
+      "prompt": "Run the checks you are told to run. Report pass/fail per check and paste only the relevant failing output. Never edit files. Never claim a pass you did not observe.",
+      "tools": { "write": false, "edit": false }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "model": "corp/gemma-4-31b",
+      "description": "Independent read-only review of a diff against the acceptance criteria.",
+      "prompt": "You get the acceptance criteria and the diff, not the implementer's claims. Judge only whether the change meets the criteria and is correct. List concrete problems with file:line. Say APPROVE or CHANGES REQUESTED.",
+      "tools": { "write": false, "edit": false, "bash": false }
+    }
+  }
+}

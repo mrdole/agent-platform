@@ -1,0 +1,52 @@
+# CI for the lab-knowledge repo. Include it from lab-knowledge/.gitlab-ci.yml:
+#
+#   include:
+#     - project: tools/agent-platform
+#       ref: v0.1.0
+#       file: ci/knowledge.gitlab-ci.yml
+#
+# knowledge-validate runs on every MR and on the default branch.
+# skills-index runs from a pipeline schedule with AP_SKILLS_INDEX=1. It scans the GitLab
+# group for SKILL.md files and opens/updates an MR from bot/skills-catalog when the catalog
+# changes. Tokens (masked, protected CI/CD variables):
+#   GITLAB_TOKEN_CATALOG_READ  group access token, Reporter, read_api (scans the group)
+#   GITLAB_TOKEN_KNOWLEDGE     lab-knowledge project access token, Developer,
+#                              api + write_repository (pushes the bot branch, opens the MR)
+
+.knowledge-base:
+  image: ${AP_IMAGE}
+  variables:
+    AP_IMAGE: registry.example.internal/tools/agent-platform:v0.1.0
+  tags: [agent]
+
+knowledge-validate:
+  extends: .knowledge-base
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - python3 /opt/agent-platform/mcp/knowledge/knowledge_core.py validate . --profiles-from /opt/agent-platform/profiles
+
+skills-index:
+  extends: .knowledge-base
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $AP_SKILLS_INDEX == "1"
+  variables:
+    AP_SKILLS_GROUP: tools
+    GIT_STRATEGY: clone
+  script:
+    - GITLAB_TOKEN="$GITLAB_TOKEN_CATALOG_READ" python3 /opt/agent-platform/tools/skills_index.py gitlab --url "$CI_SERVER_URL" --group "$AP_SKILLS_GROUP" -o catalog
+    - |
+      if [ -z "$(git status --porcelain -- catalog)" ]; then
+        echo "catalog unchanged"; exit 0
+      fi
+    - git switch -C bot/skills-catalog
+    - git add catalog
+    - git -c user.name=skills-index -c user.email=skills-index@noreply.invalid commit -q -m "Update skills catalog"
+    - git push -q --force "https://oauth2:${GITLAB_TOKEN_KNOWLEDGE}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:refs/heads/bot/skills-catalog
+    - |
+      GITLAB_TOKEN="$GITLAB_TOKEN_KNOWLEDGE" GITLAB_HOST="$CI_SERVER_HOST" \
+        glab mr create --yes --source-branch bot/skills-catalog --target-branch "$CI_DEFAULT_BRANCH" \
+        --title "Update skills catalog" --label skills-catalog \
+        --description "Automated skills index. Check new, duplicate and similar skills before merging." \
+        || echo "MR already open; branch updated"

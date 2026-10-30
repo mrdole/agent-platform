@@ -1,0 +1,83 @@
+- name: Tool directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ap_tools_dir }}"
+    - "{{ ap_bin_dir }}"
+  become: "{{ ap_become }}"
+
+- name: Installed OpenCode version
+  ansible.builtin.command: "{{ ap_bin_dir }}/opencode --version"
+  register: tools_opencode_version
+  changed_when: false
+  failed_when: false
+
+# ---- npm (default): Node.js from RHEL AppStream + the opencode-ai package ----
+- name: Install OpenCode with npm
+  when: opencode_install == "npm"
+  block:
+    - name: Install Node.js from AppStream, stream {{ nodejs_stream }}
+      ansible.builtin.dnf:
+        name: "@nodejs:{{ nodejs_stream }}/common"
+        state: present
+      become: true
+
+    - name: Install opencode-ai {{ opencode_version }}
+      ansible.builtin.command:
+        argv: "{{ ['npm', 'install', '--global', '--prefix', ap_npm_prefix, 'opencode-ai@' + opencode_version]
+                  + (['--registry', npm_registry] if npm_registry else []) }}"
+      environment:
+        NODE_EXTRA_CA_CERTS: /etc/pki/tls/certs/ca-bundle.crt
+        HTTPS_PROXY: "{{ ap_https_proxy }}"
+        NO_PROXY: "{{ ap_no_proxy }}"
+      become: "{{ ap_become }}"
+      when: (tools_opencode_version.stdout | default('') | trim) != opencode_version
+      changed_when: true
+
+# ---- archive: a tar.gz with the opencode binary (internal mirror) ----
+- name: Install OpenCode from archive
+  when: opencode_install == "archive"
+  become: "{{ ap_become }}"
+  block:
+    - name: OpenCode version directory
+      ansible.builtin.file:
+        path: "{{ ap_tools_dir }}/opencode-{{ opencode_version }}"
+        state: directory
+        mode: "0755"
+
+    - name: Unpack OpenCode
+      ansible.builtin.unarchive:
+        src: "{{ opencode_archive_url }}"
+        dest: "{{ ap_tools_dir }}/opencode-{{ opencode_version }}"
+        remote_src: true
+        creates: "{{ ap_tools_dir }}/opencode-{{ opencode_version }}/opencode"
+
+    - name: Link opencode into PATH
+      ansible.builtin.file:
+        src: "{{ ap_tools_dir }}/opencode-{{ opencode_version }}/opencode"
+        dest: "{{ ap_bin_dir }}/opencode"
+        state: link
+        force: true
+
+- name: Check that opencode is on PATH
+  ansible.builtin.shell: command -v opencode  # noqa: command-instead-of-shell (builtin)
+  environment:
+    PATH: "{{ ap_bin_dir }}:{{ ansible_facts['env']['PATH'] }}"
+  register: tools_opencode_check
+  changed_when: false
+  failed_when: tools_opencode_check.rc != 0 and opencode_install != "none"
+
+- name: Warn when opencode is missing
+  ansible.builtin.debug:
+    msg: "opencode not found and opencode_install is 'none'. Install it yourself, or set opencode_install: npm."
+  when: tools_opencode_check.rc != 0
+
+- name: Install glab from RPM (optional)
+  ansible.builtin.dnf:
+    name: "{{ glab_rpm_url }}"
+    state: present
+    disable_gpg_check: "{{ glab_rpm_disable_gpg_check }}"
+  become: true
+  when: glab_rpm_url | length > 0

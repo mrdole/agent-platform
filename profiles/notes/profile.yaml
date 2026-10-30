@@ -1,0 +1,11 @@
+name: notes
+description: Maintains your personal knowledge repo with your models - files rough notes, merges duplicates, keeps tasks and the work log tidy, and proposes notes worth promoting to the team repo.
+default_agent: librarian
+gitlab:
+  token_env: GITLAB_TOKEN_NOTES
+  role: developer
+  scopes: [write_repository]
+  bot_identity: false   # your own private repo: pushes as you via `kn sync`, no bot token needed
+runner_tags: [agent]
+skill_scopes: [core, notes]
+headless_auto_approved: []

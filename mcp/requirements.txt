@@ -1,0 +1,4 @@
+mcp>=1.10,<3
+PyYAML>=6
+pyvisa>=1.13
+pyvisa-py>=0.7

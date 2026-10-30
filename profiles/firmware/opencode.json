@@ -1,0 +1,29 @@
+{
+  "instructions": ["./RULES.md"],
+  "permission": {
+    "bash": {
+      "make*": "allow",
+      "cmake *": "allow",
+      "python3 -m pytest*": "allow",
+      "podman run*": "ask",
+      "podman images*": "allow",
+      "bench-lock *": "ask"
+    },
+    "skill": {
+      "firmware-*": "allow",
+      "bench-flash": "allow"
+    }
+  },
+  "agent": {
+    "tester": {
+      "permission": {
+        "bash": {
+          "make*": "allow",
+          "python3 -m pytest*": "allow",
+          "podman run*": "allow",
+          "bench-lock *": "deny"
+        }
+      }
+    }
+  }
+}

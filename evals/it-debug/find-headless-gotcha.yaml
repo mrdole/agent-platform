@@ -1,0 +1,13 @@
+id: itd-find-headless-gotcha
+profile: it-debug
+agent: analyst
+fixture: empty
+prompt: |
+  In a CI agent run, OpenCode ran `git push` even though our config marks `git push*` as "ask".
+  Nobody approved anything. Why did that happen, and what should the config use instead?
+  Cite the knowledge doc you used.
+# Pass only if the answer names the --auto flag and points to the gotcha doc.
+check: >-
+  grep -qiE -- '--auto|auto-approv' "$AP_EVAL_OUTPUT" &&
+  grep -qi 'opencode-headless-ask' "$AP_EVAL_OUTPUT"
+timeout_s: 900

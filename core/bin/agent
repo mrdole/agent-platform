@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# agent [--headless] <profile> [opencode args...]
+#
+# Renders core + profile config, loads the platform environment, and runs OpenCode.
+# Env precedence (low -> high): core/platform.env, site.env, secrets.env, caller env.
+set -euo pipefail
+
+caller_env="$(export -p)"
+script_home="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
+AP_HOME="${AP_HOME:-$script_home}"
+
+headless=()
+if [[ "${1:-}" == "--headless" ]]; then
+  headless=(--headless)
+  shift
+fi
+
+if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
+  echo "usage: agent [--headless] <profile> [opencode args...]" >&2
+  echo "       agent doctor [--network]      check this machine's setup" >&2
+  echo "profiles: $(cd "$AP_HOME/profiles" && printf "%s " */ | tr -d /)" >&2
+  exit 2
+fi
+if [[ "$1" == "doctor" ]]; then
+  shift
+  py="${AP_VENV:-$AP_HOME/venv}/bin/python"
+  [[ -x "$py" ]] || py=python3
+  exec "$py" "$AP_HOME/tools/doctor.py" "$@"
+fi
+profile="$1"
+shift
+
+set -a
+# shellcheck source=/dev/null
+. "$AP_HOME/core/platform.env"
+for dir in /etc/agent-platform "${XDG_CONFIG_HOME:-$HOME/.config}/agent-platform"; do
+  for f in site.env secrets.env; do
+    if [[ -r "$dir/$f" ]]; then
+      # shellcheck source=/dev/null
+      . "$dir/$f"
+    fi
+  done
+done
+set +a
+eval "$caller_env"
+
+AP_HOME="${AP_HOME:-$script_home}"
+AP_VENV="${AP_VENV:-$AP_HOME/venv}"
+export AP_HOME AP_VENV AP_PROFILE="$profile"
+
+# Prefer the platform venv (has PyYAML); fall back to the system python3.
+py="$AP_VENV/bin/python"
+[[ -x "$py" ]] || py=python3
+
+OPENCODE_CONFIG="$("$py" "$AP_HOME/tools/render.py" "$profile" "${headless[@]}")"
+export OPENCODE_CONFIG
+
+# Act as the profile's GitLab bot for this session (glab + git pushes + commit author).
+bot_exports="$("$py" "$AP_HOME/tools/botenv.py" "$profile")" || exit $?
+eval "$bot_exports"
+
+if ! command -v opencode >/dev/null 2>&1; then
+  echo "agent: opencode not found in PATH" >&2
+  exit 127
+fi
+exec opencode "$@"

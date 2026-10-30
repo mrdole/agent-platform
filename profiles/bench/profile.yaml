@@ -1,0 +1,12 @@
+name: bench
+description: Lab bench operation - read instruments, flash boards under lock, collect measurement evidence against requirements.
+default_agent: operator
+gitlab:
+  token_env: GITLAB_TOKEN_BENCH
+  role: developer
+  scopes: [api, write_repository]
+runner_tags: [agent, bench]
+skill_scopes: [core, bench]
+# Bench CI jobs run on the bench's own runner with resource_group bench-<name>, so flashing
+# under bench-lock is allowed unattended there.
+headless_auto_approved: ["bench-lock *"]

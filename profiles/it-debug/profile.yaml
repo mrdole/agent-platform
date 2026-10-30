@@ -1,0 +1,10 @@
+name: it-debug
+description: Read-only diagnosis of IT and infrastructure problems (connectivity, DNS, proxies, certificates, services, runners). Produces findings, not fixes.
+default_agent: analyst
+gitlab:
+  token_env: GITLAB_TOKEN_ANALYST
+  role: reporter
+  scopes: [read_api, read_repository]
+runner_tags: [agent]
+skill_scopes: [core, it-debug]
+headless_auto_approved: []

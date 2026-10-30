@@ -1,0 +1,11 @@
+name: firmware
+description: Firmware changes for the Spartan-7 board, built in the vitis-dev container from an externally built XSA, optionally flashed on a bench.
+default_agent: lead
+gitlab:
+  token_env: GITLAB_TOKEN_FIRMWARE
+  role: developer
+  scopes: [api, write_repository]
+runner_tags: [agent, vitis]
+skill_scopes: [core, firmware, bench-flash]
+# "ask" rules that headless runs (opencode run --auto) will auto-approve, on purpose.
+headless_auto_approved: ["podman run*"]

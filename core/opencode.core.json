@@ -1,0 +1,153 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "autoupdate": false,
+  "enabled_providers": ["corp"],
+  "provider": {
+    "corp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Corporate LLM server",
+      "options": {
+        "baseURL": "{env:AP_LLM_BASE_URL}",
+        "apiKey": "{env:CORP_LLM_KEY}"
+      },
+      "models": {
+        "laguna-5.2.1": { "name": "Laguna 5.2.1" },
+        "gpt-oss-120b": { "name": "gpt-oss 120b" },
+        "gpt-oss-20b": { "name": "gpt-oss 20b" },
+        "gemma-4-31b": { "name": "Gemma 31b" },
+        "gemma-4-26b": { "name": "Gemma 26b" }
+      }
+    }
+  },
+  "model": "{env:AP_MODEL_BUILDER}",
+  "small_model": "{env:AP_MODEL_SMALL}",
+  "instructions": ["./rules/base.md"],
+  "mcp": {
+    "knowledge": {
+      "type": "local",
+      "command": ["{env:AP_VENV}/bin/python", "{env:AP_HOME}/mcp/knowledge/server.py"],
+      "environment": {
+        "KNOWLEDGE_ROOT": "{env:AP_KNOWLEDGE_ROOT}",
+        "KNOWLEDGE_PERSONAL": "{env:AP_KNOWLEDGE_PERSONAL}",
+        "KNOWLEDGE_PROFILE": "{env:AP_PROFILE}"
+      },
+      "enabled": true,
+      "timeout": 15000
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "ask",
+      "ls*": "allow",
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "wc *": "allow",
+      "grep *": "allow",
+      "rg *": "allow",
+      "find *": "allow",
+      "find * -delete*": "deny",
+      "find * -exec*": "ask",
+      "file *": "allow",
+      "sha256sum *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git grep*": "allow",
+      "git branch*": "allow",
+      "git switch*": "allow",
+      "git add*": "allow",
+      "git commit*": "allow",
+      "git push*": "ask",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git push * main*": "deny",
+      "git push * master*": "deny",
+      "git reset --hard*": "deny",
+      "git clean*": "deny",
+      "sudo *": "deny",
+      "su *": "deny",
+      "rm -rf /*": "deny",
+      "chmod -R 777*": "deny",
+      "curl *": "ask",
+      "wget *": "deny",
+      "ssh *": "deny",
+      "scp *": "deny"
+    },
+    "webfetch": "deny",
+    "websearch": "deny",
+    "external_directory": "deny",
+    "doom_loop": "ask",
+    "skill": { "*": "deny", "core-*": "allow" },
+    "task": { "*": "deny" }
+  },
+  "agent": {
+    "build": {
+      "model": "{env:AP_MODEL_BUILDER}",
+      "permission": {
+        "task": { "*": "deny", "scout": "allow", "tester": "allow", "reviewer": "allow" }
+      }
+    },
+    "plan": {
+      "model": "{env:AP_MODEL_PLANNER}"
+    },
+    "lead": {
+      "mode": "primary",
+      "description": "Orchestrator. Turns the task into acceptance criteria, delegates to scout, implementer, tester and reviewer, and reports evidence. Never edits files.",
+      "model": "{env:AP_MODEL_PLANNER}",
+      "prompt": "{file:./prompts/lead.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": { "*": "deny", "git status*": "allow", "git diff*": "allow", "git log*": "allow" },
+        "task": { "*": "deny", "scout": "allow", "implementer": "allow", "tester": "allow", "reviewer": "allow" }
+      }
+    },
+    "scout": {
+      "mode": "subagent",
+      "description": "Read-only discovery. Returns a core-handoff (files, excerpts, dependencies, assumptions, open questions). Use before any implementation.",
+      "model": "{env:AP_MODEL_SCOUT}",
+      "prompt": "{file:./prompts/scout.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": { "*": "deny", "ls*": "allow", "git log*": "allow", "git grep*": "allow", "git show*": "allow" },
+        "task": "deny"
+      }
+    },
+    "implementer": {
+      "mode": "subagent",
+      "description": "Makes the change described in a handoff and runs focused checks. Does not commit or push.",
+      "model": "{env:AP_MODEL_BUILDER}",
+      "prompt": "{file:./prompts/implementer.md}",
+      "permission": {
+        "edit": "allow",
+        "bash": { "git commit*": "deny", "git push*": "deny" },
+        "task": "deny"
+      }
+    },
+    "tester": {
+      "mode": "subagent",
+      "description": "Runs the project's checks independently and reports pass/fail with evidence. Never edits.",
+      "model": "{env:AP_MODEL_SMALL}",
+      "prompt": "{file:./prompts/tester.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": { "git commit*": "deny", "git push*": "deny" },
+        "task": "deny"
+      }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "description": "Read-only review of a diff against the acceptance criteria. Returns APPROVE or CHANGES REQUESTED with file:line findings.",
+      "model": "{env:AP_MODEL_REVIEWER}",
+      "prompt": "{file:./prompts/reviewer.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": { "*": "deny", "git diff*": "allow", "git log*": "allow", "git show*": "allow" },
+        "task": "deny"
+      }
+    }
+  }
+}

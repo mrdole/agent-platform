@@ -1,0 +1,13 @@
+# System install on a shared agent server, run by a dedicated user.
+ap_install_scope: system
+ap_user: agent
+ap_run_user: "{{ ap_user }}"
+ap_home: /opt/agent-platform
+ap_tools_dir: /opt
+ap_bin_dir: /usr/local/bin
+ap_npm_prefix: /usr/local
+ap_config_dir: /etc/agent-platform
+ap_skills_dir: "/home/{{ ap_user }}/.config/opencode/skills"
+ap_knowledge_root: /srv/lab-knowledge
+ap_knowledge_update: true
+ap_knowledge_pull_interval: "*:0/15"

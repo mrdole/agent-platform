@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull lab-knowledge every 15 minutes
+
+[Timer]
+OnCalendar={{ ap_knowledge_pull_interval }}
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

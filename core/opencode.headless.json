@@ -1,0 +1,13 @@
+{
+  "permission": {
+    "bash": {
+      "*": "deny",
+      "git commit*": "deny",
+      "git push*": "deny",
+      "curl *": "deny",
+      "find * -exec*": "deny"
+    },
+    "question": "deny",
+    "doom_loop": "deny"
+  }
+}

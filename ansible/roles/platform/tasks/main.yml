@@ -1,0 +1,105 @@
+- name: Platform directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ap_bin_dir }}"
+    - "{{ ap_config_dir }}"
+  become: "{{ ap_become }}"
+
+- name: Skills directory for the user who runs agents
+  ansible.builtin.file:
+    path: "{{ ap_skills_dir }}"
+    state: directory
+    owner: "{{ ap_run_user }}"
+    mode: "0755"
+  become: "{{ ap_become }}"
+
+- name: Clone agent-platform
+  ansible.builtin.git:
+    repo: "{{ ap_repo_url }}"
+    dest: "{{ ap_home }}"
+    version: "{{ ap_version }}"
+    force: false
+  become: "{{ ap_become }}"
+  when: ap_install_from == "git"
+
+- name: Make platform commands executable
+  ansible.builtin.file:
+    path: "{{ ap_home }}/{{ item }}"
+    mode: "0755"
+  loop:
+    - core/bin/agent
+    - core/bin/bench-lock
+    - tools/dispatch.py
+    - tools/render.py
+    - tools/check.py
+    - tools/skills_index.py
+    - tools/models.py
+    - tools/botenv.py
+    - tools/gitlab_bots.py
+    - tools/doctor.py
+    - tools/kn.py
+    - evals/run.py
+  become: "{{ ap_become }}"
+
+- name: Python venv for the MCP servers
+  ansible.builtin.pip:
+    requirements: "{{ ap_home }}/mcp/requirements.txt"
+    virtualenv: "{{ ap_venv }}"
+    virtualenv_command: "{{ ap_python }} -m venv"
+    extra_args: "{{ ('--index-url ' + ap_pip_index_url) if ap_pip_index_url else omit }}"
+  become: "{{ ap_become }}"
+
+- name: Site environment
+  ansible.builtin.template:
+    src: site.env.j2
+    dest: "{{ ap_config_dir }}/site.env"
+    mode: "0644"
+  become: "{{ ap_become }}"
+
+- name: Secrets file (created once, never overwritten)
+  ansible.builtin.copy:
+    dest: "{{ ap_config_dir }}/secrets.env"
+    content: |
+      # KEY=value lines, sourced by the `agent` launcher. Not managed by Ansible after creation.
+      # CORP_LLM_KEY=
+      # GITLAB_TOKEN_FIRMWARE=
+    force: false
+    owner: "{{ 'root' if ap_install_scope == 'system' else ap_run_user }}"
+    group: "{{ ap_run_user }}"
+    mode: "{{ '0640' if ap_install_scope == 'system' else '0600' }}"
+  become: "{{ ap_become }}"
+
+- name: Commands on PATH
+  ansible.builtin.file:
+    src: "{{ ap_home }}/{{ item.src }}"
+    dest: "{{ ap_bin_dir }}/{{ item.dest }}"
+    state: link
+    force: true
+  loop:
+    - { src: core/bin/agent, dest: agent }
+    - { src: core/bin/bench-lock, dest: bench-lock }
+    - { src: tools/dispatch.py, dest: agent-dispatch }
+    - { src: tools/kn.py, dest: kn }
+  become: "{{ ap_become }}"
+
+- name: Find platform skills
+  ansible.builtin.find:
+    paths: "{{ ap_home }}/skills"
+    file_type: directory
+    recurse: false
+  register: platform_skill_dirs
+
+- name: Link skills into OpenCode's global skills directory
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ ap_skills_dir }}/{{ item.path | basename }}"
+    state: link
+    force: true
+  loop: "{{ platform_skill_dirs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  become: "{{ ap_become }}"
+  become_user: "{{ ap_run_user if ap_become else omit }}"

@@ -1,0 +1,14 @@
+# Per-user install for your own WSL/RHEL workstation.
+ap_install_scope: user
+ap_run_user: "{{ ansible_facts['user_id'] }}"
+# Where the platform lives. With ap_install_from: none, point this at your checkout,
+# e.g. "{{ ansible_facts['env']['HOME'] }}/repos/agent-platform".
+ap_home: "{{ ansible_facts['env']['HOME'] }}/.local/share/agent-platform"
+ap_tools_dir: "{{ ansible_facts['env']['HOME'] }}/.local/opt"
+ap_bin_dir: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+ap_npm_prefix: "{{ ansible_facts['env']['HOME'] }}/.local"   # npm -g puts opencode in ~/.local/bin
+ap_config_dir: "{{ ansible_facts['env']['HOME'] }}/.config/agent-platform"
+ap_skills_dir: "{{ ansible_facts['env']['HOME'] }}/.config/opencode/skills"
+ap_knowledge_root: "{{ ansible_facts['env']['HOME'] }}/repos/lab-knowledge"
+ap_knowledge_update: false   # don't clobber local edits; pull it yourself
+ap_personal_knowledge_root: "{{ ansible_facts['env']['HOME'] }}/repos/knowledge"

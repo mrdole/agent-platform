@@ -1,0 +1,32 @@
+{
+  "instructions": ["./RULES.md"],
+  "permission": {
+    "bash": {
+      "kn search*": "allow",
+      "kn todo*": "allow",
+      "kn log*": "allow",
+      "kn check*": "allow",
+      "kn new*": "allow",
+      "kn capture*": "allow",
+      "kn sync*": "ask",
+      "kn promote*": "ask",
+      "git push*": "deny"
+    },
+    "skill": {
+      "notes-*": "allow"
+    }
+  },
+  "agent": {
+    "librarian": {
+      "mode": "primary",
+      "description": "Keeps your personal notes useful: files and restructures notes, merges duplicates, updates tasks and the log, flags secrets, proposes promotions to the team repo.",
+      "model": "{env:AP_MODEL_BUILDER}",
+      "prompt": "{file:./prompts/librarian.md}",
+      "permission": {
+        "task": { "*": "deny", "scout": "allow" }
+      }
+    },
+    "implementer": { "disable": true },
+    "lead": { "disable": true }
+  }
+}

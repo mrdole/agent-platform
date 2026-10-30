@@ -1,0 +1,14 @@
+id: pipe-fix-ci-yaml
+profile: pipeline
+agent: lead
+fixture: ci-yaml-error
+prompt: |
+  The pipeline in this repo fails to start with a YAML error.
+  Acceptance criteria:
+  1. .gitlab-ci.yml parses as YAML.
+  2. It still defines the jobs `build` and `test` with the same scripts.
+check: >-
+  python3 -c "import yaml,sys; d=yaml.safe_load(open('.gitlab-ci.yml'));
+  ok = d['build']['script']==['make build'] and d['test']['script']==['make test'];
+  sys.exit(0 if ok else 1)"
+timeout_s: 1200

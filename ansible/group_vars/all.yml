@@ -1,0 +1,46 @@
+# ---- Site settings: fill these in ----
+ap_version: v0.1.0
+ap_repo_url: https://gitlab.example.internal/tools/agent-platform.git
+ap_knowledge_repo_url: https://gitlab.example.internal/tools/lab-knowledge.git
+ap_knowledge_version: main
+ap_personal_knowledge_repo_url: ""   # workstation only; your private notes repo
+ap_llm_base_url: https://llm.example.internal/v1
+ap_gitlab_host: gitlab.example.internal
+
+# git: clone ap_repo_url at ap_version into ap_home
+# none: ap_home is already a checkout (e.g. you are developing the platform itself)
+ap_install_from: git
+
+# Corporate CA certificates on the control node (PEM .crt), installed into the system trust store.
+ap_corp_ca_files: []
+
+# Optional proxy settings written to site.env.
+ap_https_proxy: ""
+ap_no_proxy: ""
+
+# Internal mirrors.
+ap_pip_index_url: ""
+npm_registry: ""
+
+# OpenCode: npm (Node.js from AppStream + opencode-ai) | archive (opencode_archive_url) | none
+opencode_install: npm
+opencode_version: "1.19.5"        # last version the platform was verified against
+opencode_archive_url: ""
+nodejs_stream: "22"
+glab_rpm_url: ""                  # optional; empty = skip glab install
+glab_rpm_disable_gpg_check: false
+
+# Enable CodeReady Builder + EPEL (needs internet or a Satellite mirror).
+ap_enable_crb_epel: false
+
+# RHEL 9's default python3 is 3.9, which is too old for the MCP SDK (needs 3.10+).
+# The MCP venv uses this interpreter (AppStream: python3.11 on 9.2+, python3.12 on 9.4+).
+ap_python: python3.12
+
+# python3-pyyaml lets the repo's tools (check.py, models.py, gitlab_bots.py...) run with the
+# system python3 too.
+ap_packages: [git, python3, python3-pyyaml, "{{ ap_python }}", "{{ ap_python }}-pip", podman, util-linux, tar, gzip, acl]
+
+# ---- Derived; override per group ----
+ap_become: "{{ ap_install_scope == 'system' }}"
+ap_venv: "{{ ap_home }}/venv"

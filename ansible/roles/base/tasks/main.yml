@@ -1,0 +1,45 @@
+- name: Install corporate CA certificates
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/pki/ca-trust/source/anchors/{{ item | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ap_corp_ca_files }}"
+  become: true
+  notify: Update CA trust
+
+- name: Apply CA trust before any downloads
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable CodeReady Builder
+  ansible.builtin.command:
+    cmd: "subscription-manager repos --enable codeready-builder-for-rhel-9-{{ ansible_facts['architecture'] }}-rpms"
+  become: true
+  changed_when: false
+  when: ap_enable_crb_epel | bool
+
+- name: Install EPEL
+  ansible.builtin.dnf:
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    state: present
+    disable_gpg_check: true  # local-package install; the EPEL key ships inside this package
+  become: true
+  when: ap_enable_crb_epel | bool
+
+- name: Install base packages
+  ansible.builtin.dnf:
+    name: "{{ ap_packages }}"
+    state: present
+  become: true
+
+- name: Shared bench lock directory (servers)
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/agent-platform.conf
+    content: "d /run/lock/agent-platform 1777 root root -\n"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  when: ap_install_scope == "system"
+  notify: Create tmpfiles

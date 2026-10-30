@@ -1,0 +1,29 @@
+# Site settings for agent-platform. bootstrap.sh copies this to
+# ~/.config/agent-platform/site.yml (outside the repo) and passes it to Ansible.
+# Replace every CHANGEME; leave optional values empty to skip them.
+
+# --- Required ---
+ap_llm_base_url: https://CHANGEME/v1         # OpenAI-compatible model server
+ap_gitlab_host: CHANGEME                      # e.g. gitlab.example.internal
+
+# --- Corporate network ---
+ap_corp_ca_files: []                          # PEM .crt files on this machine, e.g. [/home/you/certs/corp-root.crt]
+ap_https_proxy: ""                            # e.g. http://proxy.example.internal:8080
+ap_no_proxy: ""                               # e.g. .example.internal,localhost
+
+# --- Package sources (empty = public defaults) ---
+ap_pip_index_url: ""                          # internal PyPI mirror
+npm_registry: ""                              # internal npm mirror (OpenCode is installed from npm)
+
+# --- Tools ---
+ap_python: python3.12                         # python3.11 also works
+opencode_install: npm                         # npm | archive | none (you install it yourself)
+opencode_version: "1.19.5"                    # last version this platform was verified against
+opencode_archive_url: ""                      # only for opencode_install: archive
+glab_rpm_url: ""                              # optional; internal mirror of the glab .rpm
+
+# --- Knowledge repos ---
+ap_knowledge_repo_url: ""                     # team lab-knowledge; empty = don't clone (already have ~/repos/lab-knowledge)
+# ap_knowledge_root: /home/you/repos/lab-knowledge
+ap_personal_knowledge_repo_url: ""            # your private notes repo; empty = use/create it locally with `kn init`
+# ap_personal_knowledge_root: /home/you/repos/knowledge

@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+.pytest_cache/
+.eval-results/
+.agent-run/
+core/certs/*.crt

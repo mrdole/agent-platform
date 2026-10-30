@@ -1,0 +1,49 @@
+{
+  "instructions": ["./RULES.md"],
+  "permission": {
+    "edit": "deny",
+    "bash": {
+      "git commit*": "deny",
+      "git push*": "deny",
+      "git add*": "deny",
+      "journalctl *": "allow",
+      "systemctl status *": "allow",
+      "systemctl is-active *": "allow",
+      "systemctl list-units*": "allow",
+      "ss -*": "allow",
+      "ip addr*": "allow",
+      "ip route*": "allow",
+      "ping -c *": "allow",
+      "dig *": "allow",
+      "getent hosts *": "allow",
+      "df *": "allow",
+      "free *": "allow",
+      "uptime": "allow",
+      "openssl s_client *": "allow",
+      "openssl x509 *": "allow",
+      "curl -sI *": "allow",
+      "curl -sv *": "ask",
+      "glab issue view*": "allow",
+      "glab issue note*": "ask",
+      "glab ci view*": "allow",
+      "glab ci trace*": "allow"
+    },
+    "skill": {
+      "it-debug-*": "allow"
+    }
+  },
+  "agent": {
+    "analyst": {
+      "mode": "primary",
+      "description": "Read-only diagnosis. Gathers facts, ranks hypotheses with evidence, recommends the next action for a human.",
+      "model": "{env:AP_MODEL_PLANNER}",
+      "prompt": "{file:./prompts/analyst.md}",
+      "permission": {
+        "edit": "deny",
+        "task": { "*": "deny", "scout": "allow" }
+      }
+    },
+    "implementer": { "disable": true },
+    "build": { "disable": true }
+  }
+}

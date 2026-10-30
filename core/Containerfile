@@ -1,0 +1,52 @@
+# Image for headless agent runs in GitLab CI (dispatcher, evals, knowledge jobs).
+#
+#   buildah build -f core/Containerfile \
+#     --build-arg OPENCODE_ARCHIVE_URL=https://mirror.example.internal/opencode-linux-x64.tar.gz \
+#     --build-arg GLAB_RPM_URL=https://mirror.example.internal/glab_linux_amd64.rpm \
+#     -t registry.example.internal/tools/agent-platform:v0.1.0 .
+#
+# Put corporate CA certificates (*.crt) in core/certs/ before building.
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
+FROM ${BASE_IMAGE}
+
+ARG OPENCODE_ARCHIVE_URL
+ARG GLAB_RPM_URL
+ARG PIP_INDEX_URL=""
+
+COPY core/certs/ /tmp/certs/
+RUN cp /tmp/certs/*.crt /etc/pki/ca-trust/source/anchors/ 2>/dev/null || true; \
+    update-ca-trust && rm -rf /tmp/certs
+
+RUN dnf -y install git python3 python3-pyyaml python3.12 python3.12-pip tar gzip util-linux && dnf clean all
+
+RUN : "${GLAB_RPM_URL:?set --build-arg GLAB_RPM_URL}" && \
+    dnf -y install "$GLAB_RPM_URL" && dnf clean all
+
+RUN : "${OPENCODE_ARCHIVE_URL:?set --build-arg OPENCODE_ARCHIVE_URL}" && \
+    curl -fsSL "$OPENCODE_ARCHIVE_URL" | tar -xz -C /usr/local/bin opencode && \
+    opencode --version
+
+COPY . /opt/agent-platform
+RUN python3.12 -m venv /opt/agent-platform/venv && \
+    /opt/agent-platform/venv/bin/pip install --no-cache-dir \
+      ${PIP_INDEX_URL:+--index-url "$PIP_INDEX_URL"} \
+      -r /opt/agent-platform/mcp/requirements.txt && \
+    chmod 0755 /opt/agent-platform/core/bin/* /opt/agent-platform/tools/*.py && \
+    ln -s /opt/agent-platform/core/bin/agent /usr/local/bin/agent && \
+    ln -s /opt/agent-platform/core/bin/bench-lock /usr/local/bin/bench-lock && \
+    ln -s /opt/agent-platform/tools/dispatch.py /usr/local/bin/agent-dispatch
+
+RUN useradd -m -u 1000 agent && \
+    mkdir -p /home/agent/.config/opencode/skills && \
+    for d in /opt/agent-platform/skills/*/; do ln -s "$d" "/home/agent/.config/opencode/skills/$(basename "$d")"; done && \
+    chown -R agent:agent /home/agent/.config
+
+ENV AP_HOME=/opt/agent-platform \
+    AP_VENV=/opt/agent-platform/venv \
+    PATH=/opt/agent-platform/venv/bin:$PATH \
+    NODE_EXTRA_CA_CERTS=/etc/pki/tls/certs/ca-bundle.crt \
+    REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt \
+    OPENCODE_DISABLE_AUTOUPDATE=1
+
+USER agent
+WORKDIR /workspace

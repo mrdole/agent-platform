@@ -1,0 +1,36 @@
+- name: Agent service user
+  ansible.builtin.user:
+    name: "{{ ap_user }}"
+    comment: Agent platform runner
+    shell: /bin/bash
+    create_home: true
+  become: true
+
+- name: Check subordinate IDs exist for rootless podman
+  ansible.builtin.command: "grep -q '^{{ ap_user }}:' /etc/subuid"
+  register: agent_user_subuid
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Fail if rootless podman can't work
+  ansible.builtin.fail:
+    msg: >-
+      {{ ap_user }} has no /etc/subuid entry. Add one (e.g. 'usermod --add-subuids 200000-265535
+      --add-subgids 200000-265535 {{ ap_user }}') with a range that doesn't overlap other users.
+  when: agent_user_subuid.rc != 0
+
+- name: Keep the agent user's services running without a login session
+  ansible.builtin.command: "loginctl enable-linger {{ ap_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ ap_user }}"
+  become: true
+
+- name: Agent user OpenCode skills directory
+  ansible.builtin.file:
+    path: "{{ ap_skills_dir }}"
+    state: directory
+    owner: "{{ ap_user }}"
+    group: "{{ ap_user }}"
+    mode: "0755"
+  become: true

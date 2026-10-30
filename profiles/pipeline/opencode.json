@@ -1,0 +1,35 @@
+{
+  "instructions": ["./RULES.md"],
+  "permission": {
+    "bash": {
+      "glab ci list*": "allow",
+      "glab ci view*": "allow",
+      "glab ci status*": "allow",
+      "glab ci trace*": "allow",
+      "glab ci lint*": "allow",
+      "glab ci retry*": "ask",
+      "glab ci run*": "ask",
+      "glab mr view*": "allow",
+      "glab mr create*": "ask",
+      "glab api*": "deny",
+      "glab variable*": "deny",
+      "python3 -m pytest*": "allow",
+      "python3 -c *": "ask"
+    },
+    "skill": {
+      "pipeline-*": "allow"
+    }
+  },
+  "agent": {
+    "tester": {
+      "permission": {
+        "bash": {
+          "glab ci lint*": "allow",
+          "python3 -m pytest*": "allow",
+          "glab ci run*": "deny",
+          "glab ci retry*": "deny"
+        }
+      }
+    }
+  }
+}
