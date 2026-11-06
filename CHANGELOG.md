@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- `tools/gitlab_bots.py`: group access tokens, `protected_paths` refusal and bot audit,
+  `branch_lockdown` with `--branches`, and `export` for handing tokens to an agent user or
+  container. `tools/botenv.py`: group token lookup and `AP_BOT_TOKENS`.
 - Model registry + lookup: `tools/models.py` (list, recommend, probe /models, provider block);
   `list_models` / `recommend_model` knowledge tools; Copilot HydraFusion registered as interactive-only.
 - Bot identities: `tools/gitlab_bots.py` (create/rotate project access tokens with your PAT, CI vars,

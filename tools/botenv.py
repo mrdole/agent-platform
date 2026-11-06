@@ -5,7 +5,8 @@
 
 Token lookup, first match wins:
   1. $<token_env> from profile.yaml (e.g. GITLAB_TOKEN_FIRMWARE) - CI sets this per project
-  2. ~/.config/agent-platform/bot-tokens.json [profile][project path] - written by gitlab_bots.py
+  2. ~/.config/agent-platform/bot-tokens.json [profile][project path, or a parent group's path]
+     - written by gitlab_bots.py. $AP_BOT_TOKENS overrides the file path, e.g. in a container.
 
 With a token, for this session only:
   * glab uses it (GITLAB_TOKEN), so issues/MRs/comments are by the bot
@@ -35,6 +36,8 @@ URL = re.compile(r"^(?:ssh|https?|git)://(?:[^@/]+@)?(?P<host>[^/:]+)(?::\d+)?/(
 
 
 def tokens_file() -> Path:
+    if os.environ.get("AP_BOT_TOKENS"):
+        return Path(os.environ["AP_BOT_TOKENS"])
     base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     return base / "agent-platform" / "bot-tokens.json"
 
@@ -57,9 +60,15 @@ def lookup_token(profile: str, token_env: str, project: str | None) -> tuple[str
     path = tokens_file()
     if project and path.is_file():
         data = json.loads(path.read_text())
-        tok = (data.get(profile) or {}).get(project, {})
+        entries = data.get(profile) or {}
+        tok = entries.get(project, {})
         if tok.get("token"):
             return tok["token"], f"{path} [{profile}][{project}]"
+        # A group token covers the group's subgroups too. The most specific group wins.
+        groups = [g for g, e in entries.items() if e.get("kind") == "group" and project.startswith(g + "/")]
+        if groups:
+            group = max(groups, key=len)
+            return entries[group]["token"], f"{path} [{profile}][{group}] (group token)"
     return "", ""
 
 

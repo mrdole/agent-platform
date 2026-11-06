@@ -7,3 +7,25 @@ profiles:
   pipeline: [CHANGEME/pipeline, CHANGEME/ci-templates-a, CHANGEME/ci-templates-b, CHANGEME/vitis-dev]
   meta: [CHANGEME/agent-platform, CHANGEME/lab-knowledge]
   it-debug: [CHANGEME/firmware, CHANGEME/pipeline]
+
+# Optional: one group access token per profile. Needs Owner on the group. It reaches every
+# project in the group and its subgroups, so don't list a profile here and under `profiles`
+# for the same projects unless you mean to.
+# group_profiles:
+#   it-debug: [CHANGEME/software]
+
+# Paths no agent token may reach. A config that would break this is refused, and every run
+# flags any bot found among their members.
+# protected_paths: [CHANGEME-lab/lab-limits]
+
+# Optional: limit Developer bots to agent branches, applied with `apply --branches`.
+# Read the notes at the top of tools/gitlab_bots.py first. GitLab's most permissive matching
+# rule wins, so human_branches is a trade-off and has no default:
+#   "*/*"  main stays "push: no one", but a bot can push to names with no slash
+#   "*"    a bot is limited to agent branches, but humans can push straight to main
+# Only direct members of human_group count. Try this on a scratch project first.
+# branch_lockdown:
+#   human_group: CHANGEME/lab-humans
+#   human_branches: "*/*"
+#   agent_branches: "agent/*"
+#   projects: [CHANGEME/firmware]

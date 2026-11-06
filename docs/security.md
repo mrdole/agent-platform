@@ -55,7 +55,17 @@ Re-running is safe: tokens you already have are kept, and missing ones are rotat
 `status` to see expiry dates and any `main` that still allows direct pushes. Run
 `apply --rotate` before tokens expire.
 
-Use a short-lived PAT just for this, and don't keep it in `secrets.env`.
+Use a short-lived PAT just for this, and don't keep it in `secrets.env`. Run the script
+yourself, never through an agent.
+
+Also available, all configured in `bots.yaml`:
+- `group_profiles` makes one group access token per profile. It reaches the whole group.
+- `protected_paths` refuses any token that would reach those paths, and flags any bot found
+  among their members.
+- `branch_lockdown` with `apply --branches` limits Developer bots to agent branches. GitLab
+  applies the most permissive matching rule, so read the trade-off in `tools/gitlab_bots.py`.
+- `gitlab_bots.py export --profile <p> --out <file>` writes only the named profiles to a new
+  0600 file for an agent user or container. Set `AP_BOT_TOKENS` to read it from another path.
 
 ### Every agent session acts as the bot (tools/botenv.py, called by `agent`)
 The launcher looks up the token for the current repo and profile: the CI variable first,
