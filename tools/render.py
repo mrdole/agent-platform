@@ -10,6 +10,11 @@ Merge rules (see BLUEPRINT.md section 4):
   * dicts merge recursively; new keys are appended, existing keys keep their position, so
     permission rule order ("*" first, specific rules after) survives the merge
   * `instructions` lists are concatenated (core first); other lists are replaced
+  * OpenCode 2.x `permissions` lists (top level and per agent) are concatenated too, and
+    then every hard core `deny` is re-appended at the end, so with last-match-wins no later
+    profile or headless rule can override it. Catch-all defaults (`*` deny that the core
+    itself narrows later) stay where they are; tools/check.py verifies them instead.
+    1.x `permission` objects merge as before.
   * relative paths in `{file:...}` references and in `instructions` are made absolute,
     relative to the file they were written in
 """
@@ -27,7 +32,87 @@ from pathlib import Path
 AP_HOME = Path(os.environ.get("AP_HOME") or Path(__file__).resolve().parent.parent)
 SCHEMA = "https://opencode.ai/config.json"
 FILE_REF = re.compile(r"\{file:([^}]+)\}")
-CONCAT_KEYS = {"instructions"}
+CONCAT_KEYS = {"instructions", "permissions"}
+ACTION_ALIAS = {"bash": "shell", "task": "subagent"}  # 1.x name -> 2.x name
+
+
+def _glob(pattern: str, text: str) -> bool:
+    return re.fullmatch(".*".join(re.escape(p) for p in pattern.split("*")), text, re.S) is not None
+
+
+def object_rules(perm) -> list[dict]:
+    """1.x `permission` object -> ordered 2.x style rules."""
+    rules = []
+    for action, val in (perm.items() if isinstance(perm, dict) else []):
+        action = ACTION_ALIAS.get(action, action)
+        if isinstance(val, str):
+            rules.append({"action": action, "resource": "*", "effect": val})
+        elif isinstance(val, dict):
+            rules += [{"action": action, "resource": res, "effect": eff}
+                      for res, eff in val.items() if isinstance(eff, str)]
+    return rules
+
+
+def list_rules(perms) -> list[dict]:
+    return [r for r in perms if isinstance(r, dict)] if isinstance(perms, list) else []
+
+
+def scope_rules(node) -> list[dict]:
+    """All rules of one scope (global or one agent), 1.x object first, then 2.x list."""
+    node = node if isinstance(node, dict) else {}
+    return object_rules(node.get("permission")) + list_rules(node.get("permissions"))
+
+
+def scope_variants(node) -> list[list[dict]]:
+    """Both orders in which a runtime might stack the object and list forms."""
+    node = node if isinstance(node, dict) else {}
+    o, li = object_rules(node.get("permission")), list_rules(node.get("permissions"))
+    return [o + li, li + o] if o and li else [o + li]
+
+
+def _key(rule: dict) -> tuple:
+    return (rule.get("action"), rule.get("resource"), rule.get("effect"))
+
+
+def evaluate(rules: list[dict], action: str, resource: str):
+    """Effect of the last rule matching (action, resource); None if no rule matches."""
+    effect = None
+    for r in rules:
+        if _glob(str(r.get("action", "")), action) and _glob(str(r.get("resource", "")), resource):
+            effect = r.get("effect")
+    return effect
+
+
+def hard_denies(rules: list[dict]) -> list[dict]:
+    """Denies that are not a catch-all default (a `*` deny the same chain narrows later)."""
+    out = []
+    for i, r in enumerate(rules):
+        if r.get("effect") != "deny":
+            continue
+        if r.get("resource") == "*" and any(
+            q.get("action") == r.get("action") and q.get("effect") != "deny" for q in rules[i + 1:]
+        ):
+            continue
+        out.append({"action": r.get("action"), "resource": r.get("resource"), "effect": "deny"})
+    return out
+
+
+def _reappend(perms: list, denies: list[dict]) -> list:
+    keys = {_key(d) for d in denies}
+    return [r for r in perms if not (isinstance(r, dict) and _key(r) in keys)] + copy.deepcopy(denies)
+
+
+def enforce_core_denies(cfg: dict, core_cfg: dict) -> dict:
+    """Wherever the merged config has a 2.x `permissions` list, end it with the hard core denies."""
+    core_global = scope_rules(core_cfg)
+    if isinstance(cfg.get("permissions"), list):
+        cfg["permissions"] = _reappend(cfg["permissions"], hard_denies(core_global))
+    for name, agent in (cfg.get("agent") or {}).items():
+        if isinstance(agent, dict) and isinstance(agent.get("permissions"), list):
+            core_agent = ((core_cfg.get("agent") or {}).get(name))
+            agent["permissions"] = _reappend(agent["permissions"],
+                                             hard_denies(core_global + scope_rules(core_agent)))
+    return cfg
 
 
 def deep_merge(base: dict, over: dict) -> dict:
@@ -87,8 +172,13 @@ def render(profile: str, headless: bool = False, ap_home: Path = AP_HOME) -> dic
             layers.append((prof_dir / "opencode.headless.json", prof_dir))
 
     cfg: dict = {}
+    core_cfg: dict = {}
     for path, base in layers:
-        cfg = deep_merge(cfg, resolve_refs(load_json(path), base))
+        layer = resolve_refs(load_json(path), base)
+        cfg = deep_merge(cfg, layer)
+        if base == core_dir:
+            core_cfg = deep_merge(core_cfg, layer)
+    enforce_core_denies(cfg, core_cfg)
     cfg["$schema"] = SCHEMA
     return cfg
 

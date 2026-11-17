@@ -4,6 +4,9 @@
 - `tools/dispatch.py`: headless runs pass `--standalone` (G15: no more sharing the OpenCode 2.x background service's
   config); the target-repo refusal list now includes `.claude` and `.agents` (G20; OpenCode 2.0.27's config discovery
   reads `.claude`, `.agents`, `.opencode`, `opencode.json`, `opencode.jsonc`).
+- G19: `render.py` merges 2.x `permissions` lists and re-appends hard core denies last, so a
+  profile or headless overlay cannot drop or override them. `check.py` fails any profile whose
+  render loosens a core deny (normal and headless, 1.x object and 2.x list shapes).
 - `tools/setup_wizard.py`: guided install. Asks for each site setting, shows the `site.yml` diff,
   then offers bootstrap, the model key (typed hidden into `secrets.env`), `agent doctor`, the
   model probe, the bot-token plan/apply and a smoke eval, one step at a time. `--dry-run`
