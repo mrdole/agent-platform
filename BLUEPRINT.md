@@ -65,6 +65,7 @@ agent-platform/
 │   ├── botenv.py             per-session bot identity (token, push route, author) - used by core/bin/agent
 │   ├── gitlab_bots.py        create/rotate bot tokens per (profile, project) with your PAT
 │   ├── doctor.py             `agent doctor`: checks every requirement, prints the fix
+│   ├── setup_wizard.py       guided install: prompts for site.yml, then offers each setup step (stdlib only)
 │   ├── kn.py                 personal notes: capture/ask/review (your models), todo, log, sync, promote
 │   └── dispatch.py           issue -> agent -> draft MR
 ├── evals/

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- `tools/setup_wizard.py`: guided install. Asks for each site setting, shows the `site.yml` diff,
+  then offers bootstrap, the model key (typed hidden into `secrets.env`), `agent doctor`, the
+  model probe, the bot-token plan/apply and a smoke eval, one step at a time. `--dry-run`
+  changes nothing.
 - `tools/gitlab_bots.py`: group access tokens, `protected_paths` refusal and bot audit,
   `branch_lockdown` with `--branches`, and `export` for handing tokens to an agent user or
   container. `tools/botenv.py`: group token lookup and `AP_BOT_TOKENS`.

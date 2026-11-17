@@ -34,6 +34,7 @@ if [[ ! -f "$site" ]]; then
   cp "$repo/ansible/site.example.yml" "$site"
   echo "bootstrap: created $site"
   echo "bootstrap: fill in the CHANGEME values (LLM URL, GitLab host, CA files, mirrors), then run ./bootstrap.sh again."
+  echo "bootstrap: or let the wizard ask for them: python3 tools/setup_wizard.py"
   exit 1
 fi
 if grep -qE "^[^#]*CHANGEME" "$site"; then

@@ -44,6 +44,15 @@ GitLab-side settings that actually enforce the limits.
 
 ## Install on a RHEL 9 workstation (WSL or bare metal)
 
+**Guided:** after cloning, run the wizard. It asks for each site setting, shows what it will
+write, and then offers each step below in turn. Nothing is applied without a yes, and it can
+be re-run at any time (`--dry-run` changes nothing, `--step N` starts later).
+```
+python3 tools/setup_wizard.py
+```
+
+**By hand:**
+
 1. Clone and bootstrap:
    ```
    git clone <agent-platform url> ~/repos/agent-platform
