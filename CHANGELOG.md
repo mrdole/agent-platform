@@ -5,6 +5,9 @@
   read-only command plus a redirect no longer writes files (verified on OpenCode 2.0.27, `--standalone --auto`); denies
   the `execute` tool; core subagents get `steps` limits (scout/tester/reviewer 30, implementer 60). `check.py`
   fails a headless render with a shell allow rule that lets a redirect through or without the `execute` deny.
+- G22: OpenCode 2.0.27 `run --agent <primary>` ignored the agent's own `model` (lead/analyst ran on the builder,
+  gpt-oss-120b, not the planner). The `agent` launcher now passes `--model` from the rendered config
+  (`tools/agent_model.py`) for `run --agent X` unless `--model`/`-m` is given; covers dispatch and evals.
 - `tools/dispatch.py`: headless runs pass `--standalone` (G15: no more sharing the OpenCode 2.x background service's
   config); the target-repo refusal list now includes `.claude` and `.agents` (G20; OpenCode 2.0.27's config discovery
   reads `.claude`, `.agents`, `.opencode`, `opencode.json`, `opencode.jsonc`).

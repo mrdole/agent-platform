@@ -63,4 +63,22 @@ if ! command -v opencode >/dev/null 2>&1; then
   echo "agent: opencode not found in PATH" >&2
   exit 127
 fi
+# G22: OpenCode 2.x `run --agent <primary>` ignores the agent's own model and uses the top-level
+# `model`. Pass the agent's model explicitly (unless the caller gave --model/-m).
+if [[ "${1:-}" == "run" ]]; then
+  want="" has_model=0 prev=""
+  for a in "$@"; do
+    case "$a" in
+      --model|--model=*|-m|-m=*) has_model=1 ;;
+    esac
+    [[ "$prev" == "--agent" ]] && want="$a"
+    [[ "$a" == --agent=* ]] && want="${a#--agent=}"
+    prev="$a"
+  done
+  if [[ -n "$want" && $has_model -eq 0 ]]; then
+    if model="$("$py" "$AP_HOME/tools/agent_model.py" "$want" 2>/dev/null)" && [[ -n "$model" ]]; then
+      set -- "$1" --model "$model" "${@:2}"
+    fi
+  fi
+fi
 exec opencode "$@"

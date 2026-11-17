@@ -32,7 +32,7 @@ def test_env_precedence_and_render(root, tmp_path):
     assert out["MODEL"] == "corp/site-model"
     assert out["KEY"] == "from-ci"                         # caller env beats secrets.env
     assert out["PROFILE"] == "pipeline"
-    assert out["ARGS"] == "run --agent lead hi"
+    assert out["ARGS"] == "run --model corp/laguna-5.2.1 --agent lead hi"   # G22: agent model passed explicitly
     cfg = json.loads(open(out["CONFIG"]).read())
     assert cfg["permission"]["bash"]["*"] == "deny"        # headless overlay applied
     assert out["CONFIG"].endswith("pipeline.headless.opencode.json")
@@ -89,3 +89,14 @@ def test_bench_lock_busy(root, tmp_path):
         assert bad.returncode == 2
     finally:
         holder.wait()
+
+
+def test_explicit_model_not_overridden_and_builder_agent(root, tmp_path):
+    out = run_launcher(root, tmp_path, ["--headless", "pipeline", "run", "-m", "corp/x", "--agent", "lead", "hi"])
+    assert out["ARGS"] == "run -m corp/x --agent lead hi"
+    out = run_launcher(root, tmp_path, ["--headless", "pipeline", "run", "--agent=implementer", "hi"])
+    assert out["ARGS"] == "run --model corp/site-model --agent=implementer hi"   # site.env beats platform.env
+    out = run_launcher(root, tmp_path, ["--headless", "pipeline", "run", "--agent", "nosuch", "hi"])
+    assert out["ARGS"] == "run --agent nosuch hi"           # unknown agent: leave args alone
+    out = run_launcher(root, tmp_path, ["pipeline", "--agent", "lead"])
+    assert out["ARGS"] == "--agent lead"                    # only `run` is touched

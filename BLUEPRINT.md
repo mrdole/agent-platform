@@ -135,6 +135,14 @@ Values that vary by site use OpenCode substitution: `{env:AP_MODEL_*}`,
 The full model inventory, with what each model is good for, lives in
 `lab-knowledge/models/registry.yaml` (schema in that repo's BLUEPRINT section 5).
 
+**Primary agents and `run --agent` (G22).** OpenCode 2.0.27's `opencode run --agent <name>` ignores
+the agent's own `model` and uses the top-level `model` (the builder), so `lead`/`analyst` would silently
+run on `AP_MODEL_BUILDER`. Subagents are unaffected (they get their model from the Task call). The `agent`
+launcher therefore looks the agent's model up in the rendered config (`tools/agent_model.py`, `{env:AP_MODEL_*}`
+resolved from the launcher's environment) and inserts `--model <provider/model>` for `agent <profile> run
+--agent <name> ...`, unless the caller already passed `--model`/`-m`. `tools/dispatch.py` and `evals/run.py`
+go through the launcher and need no change. Verify with the `> <agent> · <model>` line of a run's output.
+
 To change a role's model:
 1. Rank candidates with `python3 tools/models.py recommend "<task>"`.
 2. Bake them off with evals.
