@@ -51,6 +51,9 @@ be re-run at any time (`--dry-run` changes nothing, `--step N` starts later).
 ```
 python3 tools/setup_wizard.py
 ```
+If VS Code is already set up for your model server, give the wizard the path to its
+`chatLanguageModels.json` when it asks. It reads the server URL from that file and tells you which
+platform role models the file serves.
 
 **By hand:**
 

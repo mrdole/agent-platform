@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- `tools/setup_wizard.py`: step 1 can read the model server URL from a VS Code `chatLanguageModels.json`
+  whose path you type, lists which platform role models
+  that file serves, and offers a raw key from it for step 3 without showing it.
 - G21: headless overlay denies `*>*` (globally and for lead, scout, implementer, tester, reviewer) so an allowed
   read-only command plus a redirect no longer writes files (verified on OpenCode 2.0.27, `--standalone --auto`); denies
   the `execute` tool; core subagents get `steps` limits (scout/tester/reviewer 30, implementer 60). `check.py`

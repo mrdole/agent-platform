@@ -7,7 +7,9 @@
 
 It does by prompt what README "Install on a RHEL 9 workstation" does by hand:
 
-  1. site settings   -> ~/.config/agent-platform/site.yml (shown as a diff before writing)
+  1. site settings   -> ~/.config/agent-platform/site.yml (shown as a diff before writing).
+                        Give it the path to a VS Code chatLanguageModels.json and it reads the
+                        model server URL from it and checks the platform's role models against it.
   2. install         -> ./bootstrap.sh
   3. model key       -> ~/.config/agent-platform/secrets.env (typed hidden, mode 0600)
   4. check           -> agent doctor --network
@@ -107,6 +109,97 @@ def platform_env(cfg_dir: Path) -> dict[str, str]:
     return env
 
 
+# --------------------------------------------------------------------------- VS Code model list
+CHAT_MODELS_NAME = "chatLanguageModels.json"
+_API_SUFFIX = re.compile(r"/(chat/completions|responses|messages)/?$")
+
+
+def load_jsonc(text: str):
+    """JSON with // and /* */ comments and trailing commas, as VS Code writes it."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            out.append(text[i:j + 1])
+            i = j + 1
+        elif text.startswith("//", i):
+            i = text.find("\n", i) if "\n" in text[i:] else n
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+        else:
+            out.append(c)
+            i += 1
+    return json.loads(re.sub(r",(\s*[}\]])", r"\1", "".join(out)))
+
+
+def base_url(url: str) -> str:
+    return _API_SUFFIX.sub("", url.strip()).rstrip("/")
+
+
+def chat_model_groups(data) -> list[dict]:
+    """Provider groups that name a server URL: [{name, url, models: [ids], key: none|reference|raw, raw_key}]."""
+    groups = []
+    for group in data if isinstance(data, list) else []:
+        if not isinstance(group, dict):
+            continue
+        models = [m for m in group.get("models") or [] if isinstance(m, dict) and m.get("id")]
+        urls = [base_url(u) for u in [group.get("url")] + [m.get("url") for m in models] if isinstance(u, str) and u]
+        if not urls:
+            continue
+        key = group.get("apiKey")
+        kind = "none" if not key else "reference" if str(key).startswith("${") else "raw"
+        groups.append({"name": str(group.get("name") or group.get("vendor") or "?"),
+                       "url": max(set(urls), key=urls.count), "models": [str(m["id"]) for m in models],
+                       "key": kind, "raw_key": str(key) if kind == "raw" else ""})
+    return groups
+
+
+def role_models() -> dict[str, str]:
+    """AP_MODEL_* role -> model id (without the provider prefix) from core/platform.env."""
+    env = read_env(AP_HOME / "core" / "platform.env")
+    return {k[len("AP_MODEL_"):].lower(): v.split("/", 1)[-1] for k, v in env.items() if k.startswith("AP_MODEL_")}
+
+
+def pick_chat_models(ui: "UI", ctx: dict) -> str:
+    """Offer to read the model server from a chatLanguageModels.json. Returns a URL or ''."""
+    answer = ui.ask(f"Path to a VS Code {CHAT_MODELS_NAME} to read the model server from (Enter to skip)")
+    if not answer or answer == "-":
+        return ""
+    path = Path(answer).expanduser()
+    try:
+        groups = chat_model_groups(load_jsonc(path.read_text()))
+    except (OSError, ValueError) as exc:
+        ui.say(f"  could not read {path}: {exc}")
+        return ""
+    if not groups:
+        ui.say(f"  {path} has no provider with a server URL, so it is ignored.")
+        return ""
+    group = groups[0]
+    if len(groups) > 1:
+        for number, g in enumerate(groups, 1):
+            ui.say(f"  {number}. {g['name']}: {g['url']} ({len(g['models'])} models)")
+        choice = ui.ask("Which one serves the agents?", "1")
+        group = groups[int(choice) - 1] if choice.isdigit() and 0 < int(choice) <= len(groups) else groups[0]
+    ui.say(f"  using {group['name']}: {group['url']}")
+    served, roles = set(group["models"]), role_models()
+    for role, model in sorted(roles.items()):
+        ui.say(f"  {role:9} {model:24} {'listed' if model in served else 'NOT in this file'}")
+    unused = sorted(served - set(roles.values()))
+    if unused:
+        ui.say(f"  also listed there: {', '.join(unused[:12])}{' ...' if len(unused) > 12 else ''}")
+    if any(m not in served for m in roles.values()):
+        ui.say("  Fix the missing ones in core/platform.env, core/opencode.core.json and the model registry.")
+    if group["key"] == "raw":
+        ctx["raw_key"], ctx["key_source"] = group["raw_key"], str(path)
+    elif group["key"] == "reference":
+        ui.say("  Its key is a VS Code secret reference, so you still type the key in step 3.")
+    return group["url"]
+
+
 # --------------------------------------------------------------------------- prompts
 class UI:
     """Terminal prompts. Tests replace this with scripted answers."""
@@ -180,7 +273,7 @@ def site_warnings(values: dict) -> list[str]:
 
 
 # --------------------------------------------------------------------------- steps
-def step_site(ui: UI, site: Path, dry_run: bool) -> None:
+def step_site(ui: UI, site: Path, dry_run: bool, ctx: dict | None = None) -> None:
     example = (AP_HOME / "ansible" / "site.example.yml").read_text()
     old = site.read_text() if site.is_file() else ""
     text = old or example
@@ -198,7 +291,10 @@ def step_site(ui: UI, site: Path, dry_run: bool) -> None:
         return "" if answer == "-" else answer
 
     values: dict = {}
-    values["ap_llm_base_url"] = ask("ap_llm_base_url", "Model server URL (OpenAI-compatible, ends in /v1)")
+    from_file = pick_chat_models(ui, ctx if ctx is not None else {})
+    values["ap_llm_base_url"] = (ui.ask("Model server URL (OpenAI-compatible, ends in /v1)", from_file)
+                                 if from_file else
+                                 ask("ap_llm_base_url", "Model server URL (OpenAI-compatible, ends in /v1)"))
     values["ap_gitlab_host"] = clean_host(ask("ap_gitlab_host", "GitLab host name (no https://)"))
     cas = ask("ap_corp_ca_files", "Corporate CA .crt files, comma-separated (optional)")
     values["ap_corp_ca_files"] = [c.strip() for c in cas.split(",") if c.strip()]
@@ -253,11 +349,15 @@ def run(ui: UI, cmd: list[str], dry_run: bool, env: dict | None = None) -> int:
     return rc
 
 
-def step_key(ui: UI, cfg_dir: Path, dry_run: bool) -> None:
+def step_key(ui: UI, cfg_dir: Path, dry_run: bool, ctx: dict | None = None) -> None:
     path = cfg_dir / "secrets.env"
     if read_env(path).get("CORP_LLM_KEY") and not ui.confirm("CORP_LLM_KEY is already set. Replace it?"):
         return
-    key = ui.secret("Model server key (typing is hidden)")
+    ctx = ctx or {}
+    if ctx.get("raw_key") and ui.confirm(f"Use the key stored in {ctx['key_source']}? (it is not shown)", default=True):
+        key = ctx["raw_key"]
+    else:
+        key = ui.secret("Model server key (typing is hidden)")
     if not key:
         ui.say("Nothing typed, so secrets.env is unchanged.")
         return
@@ -305,14 +405,15 @@ def step_bots(ui: UI, cfg_dir: Path, dry_run: bool) -> None:
 
 def wizard(ui: UI, cfg_dir: Path, dry_run: bool = False, first: int = 1) -> int:
     site = cfg_dir / "site.yml"
+    ctx: dict = {}  # what step 1 learned from a chatLanguageModels.json, for step 3
     steps = [
         ("Site settings", f"Asks for the model server, GitLab host, CA files, mirrors and the OpenCode "
-                          f"install, then writes {site}.", lambda: step_site(ui, site, dry_run)),
+                          f"install, then writes {site}.", lambda: step_site(ui, site, dry_run, ctx)),
         ("Install", "Runs ./bootstrap.sh: installs packages with dnf, builds the venv, links the commands "
                     "and ends with `agent doctor`. It asks for your sudo password.",
          lambda: run(ui, ["./bootstrap.sh"], dry_run)),
         ("Model key", f"Stores your model server key as CORP_LLM_KEY in {cfg_dir / 'secrets.env'}.",
-         lambda: step_key(ui, cfg_dir, dry_run)),
+         lambda: step_key(ui, cfg_dir, dry_run, ctx)),
         ("Check the machine", "Runs `agent doctor --network`, which lists anything still missing.",
          lambda: run(ui, ["core/bin/agent", "doctor", "--network"], dry_run)),
         ("Check model IDs", "Asks the model server which models it serves and compares them with "
