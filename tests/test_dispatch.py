@@ -69,7 +69,7 @@ def test_happy_path_opens_draft_mr(repo, tmp_path):
                            capture_output=True, text=True).stdout.split()
     assert "uart.c" in files and not any(f.startswith(".agent-run") for f in files)
     args = (work / "args.txt").read_text()
-    assert args.startswith("--headless firmware run --agent lead --auto")
+    assert args.startswith("--headless firmware run --standalone --agent lead --auto")
     mr = api.mrs[0]
     assert mr["source"] == branch and mr["target"] == "main" and mr["title"].startswith("Draft: ")
     assert "## Evidence" in mr["description"]
@@ -103,6 +103,26 @@ def test_strict_mode_refuses_project_config(repo, tmp_path):
     assert dispatch.dispatch(api, work, "firmware", "lead", str(remote),
                              agent_cmd=stub_agent(tmp_path, "exit 0")) == "needs-human"
     assert "override" in api.notes[-1][1]
+
+
+@pytest.mark.parametrize("name", ["opencode.json", "opencode.jsonc", ".opencode", ".claude", ".agents"])
+def test_strict_mode_refuses_each_override_path(repo, tmp_path, name):
+    work, remote = repo
+    (work / name).mkdir() if name.startswith(".") else (work / name).write_text("{}")
+    api = FakeAPI([ISSUE])
+    assert dispatch.dispatch(api, work, "firmware", "lead", str(remote),
+                             agent_cmd=stub_agent(tmp_path, "exit 0")) == "needs-human"
+    assert name in api.notes[-1][1]
+
+
+def test_run_agent_uses_private_server(tmp_path):
+    log = tmp_path / "argv"
+    agent = stub_agent(tmp_path, f'printf "%s\\n" "$@" > {log}')
+    dispatch.run_agent(agent, "pipeline", "lead", "do it", tmp_path, 7, 30)
+    argv = log.read_text().split("\n")
+    assert argv[:3] == ["--headless", "pipeline", "run"]
+    assert argv[3] == "--standalone"
+    assert argv[-2] == "do it"
 
 
 def test_idle_and_redaction():

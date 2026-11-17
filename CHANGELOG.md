@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- `tools/dispatch.py`: headless runs pass `--standalone` (G15: no more sharing the OpenCode 2.x background service's
+  config); the target-repo refusal list now includes `.claude` and `.agents` (G20; OpenCode 2.0.27's config discovery
+  reads `.claude`, `.agents`, `.opencode`, `opencode.json`, `opencode.jsonc`).
 - `tools/setup_wizard.py`: guided install. Asks for each site setting, shows the `site.yml` diff,
   then offers bootstrap, the model key (typed hidden into `secrets.env`), `agent doctor`, the
   model probe, the bot-token plan/apply and a smoke eval, one step at a time. `--dry-run`
