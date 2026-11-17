@@ -5,9 +5,18 @@
       "git commit*": "deny",
       "git push*": "deny",
       "curl *": "deny",
-      "find * -exec*": "deny"
+      "find * -exec*": "deny",
+      "*>*": "deny"
     },
+    "execute": "deny",
     "question": "deny",
     "doom_loop": "deny"
+  },
+  "agent": {
+    "lead": { "permission": { "bash": { "*>*": "deny" } } },
+    "scout": { "permission": { "bash": { "*>*": "deny" } } },
+    "implementer": { "permission": { "bash": { "*>*": "deny" } } },
+    "tester": { "permission": { "bash": { "*>*": "deny" } } },
+    "reviewer": { "permission": { "bash": { "*>*": "deny" } } }
   }
 }

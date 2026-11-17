@@ -239,11 +239,16 @@ Defined in `lab-knowledge/BLUEPRINT.md`.
 9. Every core `deny` (core config; plus the core headless overlay in headless mode) still
    wins in each profile's render, globally and per agent, for the 1.x `permission` object and
    the 2.x `permissions` list (stacked in both orders). A profile that loosens one is an error.
-10. Every eval task references an existing profile, agent and fixture.
-11. *(GitLab, not checkable here)* `main` is protected with no direct pushes. MRs need an
+10. Headless renders stop redirects and the `execute` tool (G21). No shell allow rule, globally or
+    per agent, may still allow `<allowed command> > file`, `>file`, `>> file` or `>>file`; the headless
+    overlay therefore denies `*>*` (globally and per agent, last so it wins) and denies the `execute`
+    action. This is a second layer: only the OS sandbox (O1) stops a shell that is allowed to run.
+    Also bans `>` in legitimate commands such as `2>&1`.
+11. Every eval task references an existing profile, agent and fixture.
+12. *(GitLab, not checkable here)* `main` is protected with no direct pushes. MRs need an
     approval that isn't from the author. Each profile uses its own token with the role in
     profile.yaml. See docs/security.md.
-12. *(Process)* Agents never merge. Platform changes that touch prompts, skills or
+13. *(Process)* Agents never merge. Platform changes that touch prompts, skills or
     permissions include an eval summary.
 
 ## 9. Dispatcher flow (CI)
@@ -308,6 +313,19 @@ copied in (`opencode_install: none`) and real models:
 - `agent doctor` passed.
 - Denies held under `opencode run --standalone --auto`.
 - Three evals passed, once each (not repeated, so no pass rate).
+- G21: the shell rule matches the whole command text. A deny `*>*` (or `* > *`) stops `cat f > file`
+  and `cat f > /outside`, and `*>*` also stops `cat f>>file`. An allow rule inside an agent's own
+  `permission.bash` is stacked after the global rules, so the deny is repeated per agent in the
+  headless overlay. Not tried: `>` forms through other tools (the edit tool, `git diff --output=`,
+  `find -fprint`); `cat *` still reads any file the user can read (O1 remains the fix).
+- The `execute` tool (code mode: runs code that calls `tools.shell(...)`) is controlled by the
+  permission action `execute`; `"execute": "deny"` removes it from the tool list. Its inner shell
+  calls were not seen to bypass shell rules, but nothing else names it.
+- Agent `steps` (integer, schema text "maximum number of agentic iterations before forcing text-only
+  response") works: with `steps: 2` an agent made one tool call, then answered with text starting
+  "Maximum steps reached". The subagents have limits (scout, tester, reviewer 30, implementer 60). Not
+  verified: that a subagent started through the task tool honours its own `steps`, and that
+  the limit stops the scout's 380-call loop (cause unknown). `subagent_depth` is deprecated.
 - Before that, 1.19.5 was verified for: `{env:}` / `{file:}` resolution, per-agent
   permission merging, and both MCP servers connecting.
 

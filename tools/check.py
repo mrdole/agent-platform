@@ -232,6 +232,42 @@ def check_core_denies(core_cfg: dict, cfg: dict, label: str, rep: Report) -> Non
                 break
 
 
+REDIRECT_PROBES = (" > out", ">out", " >> out", ">>out")
+
+
+def check_headless_guards(headless: dict, label: str, rep: Report) -> None:
+    """A headless run must not let a redirect through an allowed shell command, and must deny `execute`.
+
+    OpenCode 2.0.27 matches the whole command text, so `cat *` allows `cat f > anywhere` unless a
+    later `*>*` deny catches it (G21). The `execute` tool runs code that calls the other tools; denying
+    the `execute` action removes it, so a refused shell command can't be retried through it.
+    """
+    glob = render_mod.scope_variants(headless)
+    scopes = [("global", [glob])]
+    for name, agent in sorted((headless.get("agent") or {}).items()):
+        if not agent.get("disable"):
+            scopes.append((f"agent '{name}'", [glob, render_mod.scope_variants(agent)]))
+    for where, groups in scopes:
+        for combo in itertools.product(*groups):
+            chain = [r for part in combo for r in part]
+            bad = set()
+            for r in chain:
+                if r.get("effect") != "allow" or r.get("action") not in ("bash", "shell"):
+                    continue
+                for base in _samples(str(r.get("resource"))):
+                    for probe in REDIRECT_PROBES:
+                        if render_mod.evaluate(chain, str(r["action"]), base + probe) == "allow":
+                            bad.add(str(r.get("resource")))
+            for pattern in sorted(bad):
+                rep.error(f"{label}: headless {where} shell '{pattern}' still lets a redirect through "
+                          f"(`... > file` writes anywhere). Add a later shell deny '*>*' (G21)")
+            if bad:
+                break
+        if any(render_mod.evaluate([r for part in combo for r in part], "execute", "*") != "deny"
+               for combo in itertools.product(*groups)):
+            rep.error(f"{label}: headless {where} must deny the 'execute' tool (it can call tools.shell)")
+
+
 def check_profiles(root: Path, skills: dict[str, dict], rep: Report) -> list[str]:
     model_vars = set(re.findall(r"^(AP_MODEL_[A-Z_]+)=", (root / "core/platform.env").read_text(), re.M))
     names = []
@@ -274,6 +310,7 @@ def check_profiles(root: Path, skills: dict[str, dict], rep: Report) -> list[str
         core_h = render_mod.deep_merge(core_n, render_mod.load_json(core_dir / "opencode.headless.json"))
         check_core_denies(core_n, cfg, label + " (normal)", rep)
         check_core_denies(core_h, headless, label + " (headless)", rep)
+        check_headless_guards(headless, label, rep)
 
         agents = {k for k, v in cfg.get("agent", {}).items() if not v.get("disable")}
         builtin = {"build", "plan", "general", "explore"}

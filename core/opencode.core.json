@@ -110,6 +110,7 @@
       "description": "Read-only discovery. Returns a core-handoff (files, excerpts, dependencies, assumptions, open questions). Use before any implementation.",
       "model": "{env:AP_MODEL_SCOUT}",
       "prompt": "{file:./prompts/scout.md}",
+      "steps": 30,
       "permission": {
         "edit": "deny",
         "bash": { "*": "deny", "ls*": "allow", "git log*": "allow", "git grep*": "allow", "git show*": "allow" },
@@ -121,6 +122,7 @@
       "description": "Makes the change described in a handoff and runs focused checks. Does not commit or push.",
       "model": "{env:AP_MODEL_BUILDER}",
       "prompt": "{file:./prompts/implementer.md}",
+      "steps": 60,
       "permission": {
         "edit": "allow",
         "bash": { "git commit*": "deny", "git push*": "deny" },
@@ -132,6 +134,7 @@
       "description": "Runs the project's checks independently and reports pass/fail with evidence. Never edits.",
       "model": "{env:AP_MODEL_SMALL}",
       "prompt": "{file:./prompts/tester.md}",
+      "steps": 30,
       "permission": {
         "edit": "deny",
         "bash": { "git commit*": "deny", "git push*": "deny" },
@@ -143,6 +146,7 @@
       "description": "Read-only review of a diff against the acceptance criteria. Returns APPROVE or CHANGES REQUESTED with file:line findings.",
       "model": "{env:AP_MODEL_REVIEWER}",
       "prompt": "{file:./prompts/reviewer.md}",
+      "steps": 30,
       "permission": {
         "edit": "deny",
         "bash": { "*": "deny", "git diff*": "allow", "git log*": "allow", "git show*": "allow" },
