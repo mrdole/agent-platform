@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- `docs/ai-install-guide.md`: instructions for an AI assistant helping a person install the platform
+  (rules, facts to collect, the wizard steps, verification, and a table of known install problems).
 - `tools/setup_wizard.py`: the install step refuses to run while `site.yml` is missing or still has
   placeholder values, and a step that fails now asks before moving on to the next one.
 - `tools/setup_wizard.py`: step 1 can read the model server URL from a VS Code `chatLanguageModels.json`

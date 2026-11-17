@@ -55,6 +55,10 @@ If VS Code is already set up for your model server, give the wizard the path to 
 `chatLanguageModels.json` when it asks. It reads the server URL from that file and tells you which
 platform role models the file serves.
 
+**With an AI assistant:** point it at `docs/ai-install-guide.md`. It tells the assistant how to
+guide you through the wizard, what it must never do (handle keys, loosen rules, push), and how to
+fix the problems a fresh machine usually hits.
+
 **By hand:**
 
 1. Clone and bootstrap:

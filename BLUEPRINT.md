@@ -82,7 +82,7 @@ agent-platform/
 │   ├── bots.example.yaml     projects per profile for gitlab_bots.py
 │   ├── group_vars/{all,workstations,agent_servers}.yml
 │   └── roles/{base,tools,agent_user,platform,knowledge}/
-├── docs/{security.md,skills.md}
+├── docs/{security.md,skills.md,ai-install-guide.md}
 └── tests/                    pytest; no network, no real models
 ```
 
