@@ -12,6 +12,10 @@
   level, URL in `opencode_archive_url`, no built-in URL); the tools role fails early on npm + 2.x or
   archive + empty URL. `agent doctor` hint, setup wizard warning and defaults, README and BLUEPRINT
   section 11 updated (verified / not verified lists).
+- `evals/run.py` (G18): `--repeat N` with pass rates (baseline compares rates), `--standalone` on by
+  default (`--no-standalone` to drop), `--format json` runs with per-run `tools.jsonl`, `raw.jsonl` and
+  denied-call counts, a `versions` block in `results.json`, and checks run in a copy of the workspace.
+  `evals/agent_cmd_pi.sh`: untested Pi wrapper for `AP_EVAL_AGENT_CMD`.
 - `tools/setup_wizard.py`: guided install. Asks for each site setting, shows the `site.yml` diff,
   then offers bootstrap, the model key (typed hidden into `secrets.env`), `agent doctor`, the
   model probe, the bot-token plan/apply and a smoke eval, one step at a time. `--dry-run`

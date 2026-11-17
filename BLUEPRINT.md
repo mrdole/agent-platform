@@ -208,6 +208,14 @@ prompt: |
 check: <shell; exit 0 = pass; $AP_EVAL_OUTPUT = agent output file>
 timeout_s: 1800
 ```
+`evals/run.py` runs each task `--repeat N` times (default 1) in fresh workspaces with
+`run --standalone --format json`, and runs `check` in a copy of the workspace. Per run it
+saves `raw.jsonl`, `tools.jsonl` (one line per tool call), `output.md` (text parts of the
+stream, or the raw output if it is not JSON) and `check.log`. `results.json` holds `versions`
+(OpenCode, platform version and commit, `AP_MODEL_*` roles, rendered-config hash per profile),
+`denied_calls`, and per task `passes`, `runs_n`, `pass_rate` and `runs`. Baselines compare pass
+rates (an old boolean `pass` counts as 1.0 or 0.0). `evals/agent_cmd_pi.sh` is an untested
+`AP_EVAL_AGENT_CMD` wrapper for the Pi agent.
 
 ### Knowledge docs and inventory
 Defined in `lab-knowledge/BLUEPRINT.md`.
