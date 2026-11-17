@@ -283,9 +283,32 @@ These depend on OpenCode behavior that may change between versions:
 - `agent.<name>.disable` for built-in agents.
 - Provider packages (`@ai-sdk/openai-compatible`) may be fetched from npm on first use.
   Air-gapped hosts need an npm mirror or a pre-warmed OpenCode cache.
-Last verified against **OpenCode 1.19.5**: the rendered configs load, `{env:}` and
-`{file:}` resolve in model/prompt/instructions/MCP command, per-agent permissions merge
-as designed, and both MCP servers connect.
+
+**Pinned version: OpenCode 2.0.27** (decision D14, still provisional). The npm package
+`opencode-ai` has no 2.x release (latest 1.19.6 on 2026-11-17), so 2.x is not installed
+with npm. `opencode_install` defaults to `archive`: the tools role unpacks a tar.gz from
+`opencode_archive_url` (a site setting on your internal mirror, no public URL is baked in).
+The archive must contain the single self-contained `opencode` executable at its top level.
+`none` (install it yourself) also works. The role fails early on `npm` with a 2.x version
+and on `archive` with an empty URL. `npm` remains valid only for 1.x pins (last 1.x
+verified: 1.19.5).
+
+Verified on 2026-11-17 against **OpenCode 2.0.27**, in a RHEL 9 container with the binary
+copied in (`opencode_install: none`) and real models:
+- 2.0.27 loads the rendered 1.x-shaped configs and converts `permission` to its ordered
+  `permissions` list itself.
+- `agent doctor` passed.
+- Denies held under `opencode run --standalone --auto`.
+- Three evals passed, once each (not repeated, so no pass rate).
+- Before that, 1.19.5 was verified for: `{env:}` / `{file:}` resolution, per-agent
+  permission merging, and both MCP servers connecting.
+
+Not verified on 2.0.27:
+- A per-agent model for primary agents did not apply under `run --agent`.
+- The edit tool on paths outside the repo.
+- A corporate CA (TLS to an internal model server or mirror).
+- GitLab paths (MRs, bot tokens, protected branches).
+- The Ansible `archive` install path itself (the role was not run against 2.0.27).
 
 After every upgrade, re-check with:
 ```text

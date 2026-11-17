@@ -13,13 +13,13 @@ ap_no_proxy: ""                               # e.g. .example.internal,localhost
 
 # --- Package sources (empty = public defaults) ---
 ap_pip_index_url: ""                          # internal PyPI mirror
-npm_registry: ""                              # internal npm mirror (OpenCode is installed from npm)
+npm_registry: ""                              # internal npm mirror (only used for opencode_install: npm, 1.x versions)
 
 # --- Tools ---
 ap_python: python3.12                         # python3.11 also works
-opencode_install: npm                         # npm | archive | none (you install it yourself)
-opencode_version: "1.19.5"                    # last version this platform was verified against
-opencode_archive_url: ""                      # only for opencode_install: archive
+opencode_install: archive                     # archive | none (you install it yourself) | npm (1.x only; npm has no 2.x)
+opencode_version: "2.0.27"                    # verified 2026-11-17 in a RHEL 9 container (see BLUEPRINT section 11)
+opencode_archive_url: ""                      # REQUIRED for archive: your mirror's tar.gz with the `opencode` executable at its top level
 glab_rpm_url: ""                              # optional; internal mirror of the glab .rpm
 
 # --- Knowledge repos ---

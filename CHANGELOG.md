@@ -7,6 +7,11 @@
 - G19: `render.py` merges 2.x `permissions` lists and re-appends hard core denies last, so a
   profile or headless overlay cannot drop or override them. `check.py` fails any profile whose
   render loosens a core deny (normal and headless, 1.x object and 2.x list shapes).
+- G14: pin OpenCode **2.0.27** (D14, provisional; verified 2026-11-17 in a RHEL 9 container). npm has no
+  2.x, so `opencode_install` now defaults to `archive` (tar.gz with the `opencode` executable at its top
+  level, URL in `opencode_archive_url`, no built-in URL); the tools role fails early on npm + 2.x or
+  archive + empty URL. `agent doctor` hint, setup wizard warning and defaults, README and BLUEPRINT
+  section 11 updated (verified / not verified lists).
 - `tools/setup_wizard.py`: guided install. Asks for each site setting, shows the `site.yml` diff,
   then offers bootstrap, the model key (typed hidden into `secrets.env`), `agent doctor`, the
   model probe, the bot-token plan/apply and a smoke eval, one step at a time. `--dry-run`
@@ -19,7 +24,7 @@
 - Bot identities: `tools/gitlab_bots.py` (create/rotate project access tokens with your PAT, CI vars,
   protect main, labels); `tools/botenv.py` makes every `agent` session push/act as the profile's bot.
 - RHEL 9 install: `bootstrap.sh`, site settings in `~/.config/agent-platform/site.yml`, Python 3.12
-  venv (MCP SDK needs 3.10+), OpenCode via npm (pinned 1.19.5), ansible-core 2.14 compatible,
+  venv (MCP SDK needs 3.10+), OpenCode pinned (originally npm 1.19.5, see G14 above), ansible-core 2.14 compatible,
   `agent doctor`.
 - Knowledge: SQLite FTS5 search with BM25 fallback; personal notes repo as a second source;
   `kn` (capture/ask/review with your models, todo, log, sync, promote); `notes` profile + `notes-curate` skill.

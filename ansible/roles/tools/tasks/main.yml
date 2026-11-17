@@ -8,13 +8,27 @@
     - "{{ ap_bin_dir }}"
   become: "{{ ap_become }}"
 
+- name: Check the OpenCode install settings
+  ansible.builtin.assert:
+    that:
+      - opencode_install in ['npm', 'archive', 'none']
+      - not (opencode_install == 'npm' and (opencode_version | string).split('.')[0] | int >= 2)
+      - not (opencode_install == 'archive' and (opencode_archive_url | default('') | length) == 0)
+    fail_msg: >-
+      Bad OpenCode settings (opencode_install={{ opencode_install }}, opencode_version={{ opencode_version }}).
+      opencode_install must be npm, archive or none. npm cannot install OpenCode 2.x (the opencode-ai
+      package has no 2.x release): use archive with opencode_archive_url set to a tar.gz on your
+      internal mirror that holds the `opencode` executable, or none and install it yourself.
+      archive needs opencode_archive_url to be non-empty.
+    quiet: true
+
 - name: Installed OpenCode version
   ansible.builtin.command: "{{ ap_bin_dir }}/opencode --version"
   register: tools_opencode_version
   changed_when: false
   failed_when: false
 
-# ---- npm (default): Node.js from RHEL AppStream + the opencode-ai package ----
+# ---- npm (1.x only): Node.js from RHEL AppStream + the opencode-ai package ----
 - name: Install OpenCode with npm
   when: opencode_install == "npm"
   block:
@@ -36,7 +50,7 @@
       when: (tools_opencode_version.stdout | default('') | trim) != opencode_version
       changed_when: true
 
-# ---- archive: a tar.gz with the opencode binary (internal mirror) ----
+# ---- archive (default): a tar.gz with the `opencode` executable at its top level (internal mirror) ----
 - name: Install OpenCode from archive
   when: opencode_install == "archive"
   become: "{{ ap_become }}"
@@ -71,7 +85,7 @@
 
 - name: Warn when opencode is missing
   ansible.builtin.debug:
-    msg: "opencode not found and opencode_install is 'none'. Install it yourself, or set opencode_install: npm."
+    msg: "opencode not found and opencode_install is 'none'. Install it yourself, or set opencode_install: archive with opencode_archive_url."
   when: tools_opencode_check.rc != 0
 
 - name: Install glab from RPM (optional)
