@@ -33,7 +33,7 @@ import yaml
 AP_HOME = Path(os.environ.get("AP_HOME") or Path(__file__).resolve().parent.parent)
 READY, RUNNING, REVIEW, NEEDS_HUMAN, FAILED = (
     "agent::ready", "agent::running", "agent::review", "agent::needs-human", "agent::failed")
-OVERRIDE_FILES = ("opencode.json", "opencode.jsonc", ".opencode")
+OVERRIDE_FILES = ("opencode.json", "opencode.jsonc", ".opencode", ".claude", ".agents")
 RUN_DIR = ".agent-run"
 OUTPUT_TAIL = 6000
 
@@ -113,7 +113,7 @@ def has_project_override(repo: Path) -> bool:
 
 
 def run_agent(agent_cmd: str, profile: str, agent: str, prompt: str, repo: Path, iid: int, timeout: int):
-    cmd = [agent_cmd, "--headless", profile, "run", "--agent", agent, "--auto", "--title", f"#{iid}", prompt]
+    cmd = [agent_cmd, "--headless", profile, "run", "--standalone", "--agent", agent, "--auto", "--title", f"#{iid}", prompt]
     try:
         proc = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
