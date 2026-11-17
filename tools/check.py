@@ -9,6 +9,7 @@ Every rule here maps to an invariant in BLUEPRINT.md section 8.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import re
 import sys
@@ -187,6 +188,50 @@ def skill_patterns_ok(cfg: dict, skills: dict[str, dict], label: str, rep: Repor
     return allowed
 
 
+def _samples(pattern: str) -> set[str]:
+    return {pattern, pattern.replace("*", "x")}
+
+
+def check_core_denies(core_cfg: dict, cfg: dict, label: str, rep: Report) -> None:
+    """Every core deny must still win in the rendered profile config (1.x and 2.x shapes).
+
+    Each deny's resource is tried as a literal and with `*` filled in; the last matching rule
+    must be deny. The 1.x object and 2.x list forms are stacked in both orders.
+    """
+    core_global = render_mod.scope_rules(core_cfg)
+    scopes = [("global", core_global, [render_mod.scope_variants(cfg)])]
+    names = set(core_cfg.get("agent") or {}) | set(cfg.get("agent") or {})
+    for name in sorted(names):
+        pagent = (cfg.get("agent") or {}).get(name) or {}
+        if pagent.get("disable"):
+            continue
+        scopes.append((f"agent '{name}'", core_global + render_mod.scope_rules((core_cfg.get("agent") or {}).get(name)),
+                       [render_mod.scope_variants(cfg), render_mod.scope_variants(pagent)]))
+    for where, core_rules, groups in scopes:
+        seen = set()
+        for deny in (r for r in core_rules if r.get("effect") == "deny"):
+            k = (deny.get("action"), deny.get("resource"))
+            if k in seen:
+                continue
+            seen.add(k)
+            for act in _samples(str(k[0])):
+                for res in _samples(str(k[1])):
+                    if render_mod.evaluate(core_rules, act, res) != "deny":
+                        continue  # the core itself narrows this one
+                    for combo in itertools.product(*groups):
+                        chain = [r for part in combo for r in part]
+                        if render_mod.evaluate(chain, act, res) != "deny":
+                            rep.error(f"{label}: {where} loosens core deny {k[0]} '{k[1]}' "
+                                      f"(effective: {render_mod.evaluate(chain, act, res)})")
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    continue
+                break
+
+
 def check_profiles(root: Path, skills: dict[str, dict], rep: Report) -> list[str]:
     model_vars = set(re.findall(r"^(AP_MODEL_[A-Z_]+)=", (root / "core/platform.env").read_text(), re.M))
     names = []
@@ -224,6 +269,11 @@ def check_profiles(root: Path, skills: dict[str, dict], rep: Report) -> list[str
             rep.error(f"{label}: render failed: {exc}")
             continue
         check_rendered(cfg, label, model_vars, rep)
+        core_dir = root / "core"
+        core_n = render_mod.load_json(core_dir / "opencode.core.json")
+        core_h = render_mod.deep_merge(core_n, render_mod.load_json(core_dir / "opencode.headless.json"))
+        check_core_denies(core_n, cfg, label + " (normal)", rep)
+        check_core_denies(core_h, headless, label + " (headless)", rep)
 
         agents = {k for k, v in cfg.get("agent", {}).items() if not v.get("disable")}
         builtin = {"build", "plan", "general", "explore"}

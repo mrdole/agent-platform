@@ -99,7 +99,11 @@ agent-platform/
    `core/opencode.headless.json` → (headless) `profiles/<p>/opencode.headless.json`.
    Merge rules: objects merge recursively, with new keys appended and existing keys kept
    in place (this preserves permission order, so `"*"` stays first and the last match
-   wins). `instructions` lists concatenate. Other lists are replaced. Relative
+   wins). `instructions` lists concatenate. OpenCode 2.x `permissions` lists (global and
+   per agent) concatenate, then every hard core `deny` (core and, in headless, the headless
+   core overlay; 1.x object denies included) is re-appended last, so no later profile rule
+   can override it. A catch-all `*` deny that the core itself narrows later is a default and
+   stays in place. Other lists are replaced. Relative
    `{file:...}` and `instructions` paths become absolute, resolved against the file
    that wrote them.
 4. Sets `OPENCODE_CONFIG` to the rendered file.
@@ -224,11 +228,14 @@ Defined in `lab-knowledge/BLUEPRINT.md`.
    `headless_auto_approved`, because `opencode run --auto` approves `ask`. Anything not
    acknowledged there must be denied in `profiles/<p>/opencode.headless.json`.
 8. Reporter-role profiles deny edits globally, and no enabled agent allows edits.
-9. Every eval task references an existing profile, agent and fixture.
-10. *(GitLab, not checkable here)* `main` is protected with no direct pushes. MRs need an
+9. Every core `deny` (core config; plus the core headless overlay in headless mode) still
+   wins in each profile's render, globally and per agent, for the 1.x `permission` object and
+   the 2.x `permissions` list (stacked in both orders). A profile that loosens one is an error.
+10. Every eval task references an existing profile, agent and fixture.
+11. *(GitLab, not checkable here)* `main` is protected with no direct pushes. MRs need an
     approval that isn't from the author. Each profile uses its own token with the role in
     profile.yaml. See docs/security.md.
-11. *(Process)* Agents never merge. Platform changes that touch prompts, skills or
+12. *(Process)* Agents never merge. Platform changes that touch prompts, skills or
     permissions include an eval summary.
 
 ## 9. Dispatcher flow (CI)
