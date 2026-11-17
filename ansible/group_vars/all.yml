@@ -22,10 +22,19 @@ ap_no_proxy: ""
 ap_pip_index_url: ""
 npm_registry: ""
 
-# OpenCode: npm (Node.js from AppStream + opencode-ai) | archive (opencode_archive_url) | none
-opencode_install: npm
-opencode_version: "1.19.5"        # last version the platform was verified against
-opencode_archive_url: ""
+# OpenCode install mode:
+#   archive: unpack a tar.gz from opencode_archive_url (default; needed for 2.x, which is not on npm).
+#            The archive must contain the single executable `opencode` at its top level.
+#            Host it on your internal mirror: the platform ships no download URL.
+#   npm:     Node.js from AppStream + opencode-ai. Only works for 1.x versions (npm has no 2.x).
+#   none:    you install `opencode` into PATH yourself.
+# The tools role fails early on npm with a 2.x version, or archive with an empty URL.
+opencode_install: archive
+# 2.0.27 is the version verified so far (2026-11-17, RHEL 9 container, installed with `none` from a
+# copied binary): rendered configs loaded, `agent doctor` passed, denies held under
+# `run --standalone --auto`, three evals passed once each. See BLUEPRINT section 11 for gaps.
+opencode_version: "2.0.27"
+opencode_archive_url: ""          # site setting, e.g. https://mirror.example.internal/opencode-2.0.27-linux-x64.tar.gz
 nodejs_stream: "22"
 glab_rpm_url: ""                  # optional; empty = skip glab install
 glab_rpm_disable_gpg_check: false

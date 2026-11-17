@@ -172,9 +172,10 @@ def site_warnings(values: dict) -> list[str]:
         warnings.append("the model URL usually ends in /v1 for an OpenAI-compatible server")
     version = values.get("opencode_version", "")
     if values.get("opencode_install") == "npm" and version.split(".")[0].isdigit() and int(version.split(".")[0]) >= 2:
-        warnings.append("OpenCode 2.x was not published to npm as `opencode-ai` when this was written "
-                        "(check with `npm view opencode-ai versions`). If the install fails, use "
-                        "`archive` with an internal tarball, or `none` and install the binary yourself.")
+        warnings.append("npm cannot install OpenCode 2.x (`opencode-ai` has no 2.x release, checked "
+                        "2026-11-17); the install would fail with ETARGET. Use `archive` with "
+                        "opencode_archive_url pointing at a tar.gz on your internal mirror that holds the "
+                        "`opencode` executable, or `none` and install the binary yourself.")
     return warnings
 
 
@@ -204,10 +205,10 @@ def step_site(ui: UI, site: Path, dry_run: bool) -> None:
     values["ap_https_proxy"] = ask("ap_https_proxy", "HTTPS proxy (optional)")
     values["ap_no_proxy"] = ask("ap_no_proxy", "No-proxy list (optional)") if values["ap_https_proxy"] else ""
     values["ap_pip_index_url"] = ask("ap_pip_index_url", "Internal PyPI mirror URL (optional)")
-    values["npm_registry"] = ask("npm_registry", "Internal npm mirror URL (optional)")
-    values["opencode_install"] = ask("opencode_install", f"How to install OpenCode ({' | '.join(INSTALL_MODES)})", "npm")
-    values["opencode_version"] = ask("opencode_version", "OpenCode version to pin")
-    values["opencode_archive_url"] = (ask("opencode_archive_url", "URL of the OpenCode tar.gz")
+    values["npm_registry"] = ask("npm_registry", "Internal npm mirror URL (optional; only for npm installs of OpenCode 1.x)")
+    values["opencode_install"] = ask("opencode_install", f"How to install OpenCode ({' | '.join(INSTALL_MODES)})", "archive")
+    values["opencode_version"] = ask("opencode_version", "OpenCode version to pin", "2.0.27")
+    values["opencode_archive_url"] = (ask("opencode_archive_url", "URL of the OpenCode tar.gz (internal mirror; `opencode` executable at its top level)")
                                       if values["opencode_install"] == "archive" else current("opencode_archive_url"))
     values["glab_rpm_url"] = ask("glab_rpm_url", "glab .rpm URL (optional; empty = skip glab)")
     values["ap_knowledge_repo_url"] = ask("ap_knowledge_repo_url",

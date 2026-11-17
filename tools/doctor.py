@@ -68,7 +68,7 @@ def checks(env: dict[str, str], network: bool = False) -> list[tuple[str, bool, 
     add("MCP SDK + PyYAML in venv", mcp_ok, True, "importable" if mcp_ok else "not importable", FIX_INSTALL)
 
     oc = _version(["opencode", "--version"])
-    add("opencode on PATH", bool(oc), True, oc or "not found", FIX_INSTALL + " (opencode_install: npm)")
+    add("opencode on PATH", bool(oc), True, oc or "not found", FIX_INSTALL + " (opencode_install: archive with opencode_archive_url, or none and install it yourself; npm has no 2.x)")
     add("flock (bench-lock)", bool(shutil.which("flock")), True, shutil.which("flock") or "not found",
         "sudo dnf install util-linux")
 

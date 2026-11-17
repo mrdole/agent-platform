@@ -22,7 +22,8 @@ GitLab-side settings that actually enforce the limits.
 - RHEL 9.x (WSL is fine), registered so `dnf` works, and sudo.
 - Network access to:
   - dnf repos (BaseOS/AppStream, or your Satellite),
-  - PyPI and the npm registry (or internal mirrors, set in `site.yml`),
+  - PyPI (or an internal mirror, set in `site.yml`),
+  - an internal web or file server that hosts the OpenCode tar.gz (`opencode_archive_url`),
   - the model server,
   - GitLab.
 - Your LLM API key, and a GitLab PAT (`api` scope) only if you set up bot identities.
@@ -34,7 +35,7 @@ GitLab-side settings that actually enforce the limits.
 | ansible-core, git | runs the install | dnf (bootstrap.sh) |
 | python3.12 + venv | MCP servers need Python ≥ 3.10 (RHEL's default python3 is 3.9) | dnf AppStream + PyPI |
 | python3-pyyaml | lets the repo tools run with system python3 | dnf |
-| Node.js 22 + opencode-ai | the agent runtime (OpenCode, pinned version) | dnf AppStream module + npm |
+| OpenCode 2.0.27 | the agent runtime (pinned) | tar.gz from `opencode_archive_url` (your mirror) |
 | podman, util-linux (flock), acl | builds in containers, bench locking | dnf |
 | corporate CA certs | TLS to internal hosts | your `.crt` files |
 | glab *(optional)* | pipeline/it-debug skills, MRs from interactive sessions | your `.rpm` URL |
