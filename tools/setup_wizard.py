@@ -349,6 +349,24 @@ def run(ui: UI, cmd: list[str], dry_run: bool, env: dict | None = None) -> int:
     return rc
 
 
+def unfilled(site: Path) -> list[str]:
+    """Lines of site.yml that still hold a placeholder (comments ignored). Missing file = one entry."""
+    if not site.is_file():
+        return [f"{site} does not exist"]
+    return [line.strip() for line in site.read_text().splitlines() if PLACEHOLDER in line.split("#")[0]]
+
+
+def step_install(ui: UI, site: Path, dry_run: bool) -> int:
+    missing = [] if dry_run else unfilled(site)  # a dry run only shows the command
+    if missing:
+        ui.say("Not installing: the site settings are not filled in yet.")
+        for line in missing:
+            ui.say(f"  {line}")
+        ui.say("Run step 1 first (python3 tools/setup_wizard.py), then come back to this step.")
+        return 1
+    return run(ui, ["./bootstrap.sh"], dry_run)
+
+
 def step_key(ui: UI, cfg_dir: Path, dry_run: bool, ctx: dict | None = None) -> None:
     path = cfg_dir / "secrets.env"
     if read_env(path).get("CORP_LLM_KEY") and not ui.confirm("CORP_LLM_KEY is already set. Replace it?"):
@@ -411,7 +429,7 @@ def wizard(ui: UI, cfg_dir: Path, dry_run: bool = False, first: int = 1) -> int:
                           f"install, then writes {site}.", lambda: step_site(ui, site, dry_run, ctx)),
         ("Install", "Runs ./bootstrap.sh: installs packages with dnf, builds the venv, links the commands "
                     "and ends with `agent doctor`. It asks for your sudo password.",
-         lambda: run(ui, ["./bootstrap.sh"], dry_run)),
+         lambda: step_install(ui, site, dry_run)),
         ("Model key", f"Stores your model server key as CORP_LLM_KEY in {cfg_dir / 'secrets.env'}.",
          lambda: step_key(ui, cfg_dir, dry_run, ctx)),
         ("Check the machine", "Runs `agent doctor --network`, which lists anything still missing.",
@@ -434,7 +452,9 @@ def wizard(ui: UI, cfg_dir: Path, dry_run: bool = False, first: int = 1) -> int:
             if number < first:
                 continue
             if offer(ui, f"Step {number} of {len(steps)}: {title}", detail):
-                action()
+                if action() not in (None, 0) and not ui.confirm(
+                        f"Step {number} did not finish cleanly. Go on to the next step anyway?"):
+                    raise Quit
             else:
                 ui.say("skipped")
     except Quit:

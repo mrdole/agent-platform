@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- `tools/setup_wizard.py`: the install step refuses to run while `site.yml` is missing or still has
+  placeholder values, and a step that fails now asks before moving on to the next one.
 - `tools/setup_wizard.py`: step 1 can read the model server URL from a VS Code `chatLanguageModels.json`
   whose path you type, lists which platform role models
   that file serves, and offers a raw key from it for step 3 without showing it.

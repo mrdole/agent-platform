@@ -165,3 +165,21 @@ def test_unreadable_or_empty_chat_models_file_is_ignored(tmp_path):
     ui = ScriptedUI([str(f)])
     assert sw.pick_chat_models(ui, {}) == "" and "ignored" in ui.text
     assert sw.pick_chat_models(ScriptedUI([str(tmp_path / "missing.json")]), {}) == ""
+
+
+def test_install_refuses_while_site_has_placeholders(tmp_path, monkeypatch):
+    monkeypatch.setattr(sw.subprocess, "run", lambda *a, **k: pytest.fail("ran a command"))
+    site = tmp_path / "site.yml"
+    ui = ScriptedUI([])
+    assert sw.step_install(ui, site, dry_run=False) == 1 and "does not exist" in ui.text
+    site.write_text("ap_llm_base_url: https://CHANGEME/v1  # model server\nap_gitlab_host: gitlab.corp  # e.g. CHANGEME\n")
+    ui = ScriptedUI([])
+    assert sw.step_install(ui, site, dry_run=False) == 1
+    assert "ap_llm_base_url" in ui.text and "ap_gitlab_host" not in ui.text
+
+
+def test_failed_step_stops_unless_told_to_go_on(tmp_path, monkeypatch):
+    monkeypatch.setattr(sw.subprocess, "run", lambda *a, **k: pytest.fail("ran a command"))
+    ui = ScriptedUI(["s", "y", ""])        # skip step 1, try install with no site.yml, Enter = do not go on
+    assert sw.wizard(ui, tmp_path) == 1
+    assert "Not installing" in ui.text and "Step 3" not in ui.text
